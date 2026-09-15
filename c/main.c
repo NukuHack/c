@@ -4,6 +4,12 @@
 // resolved via -Iinclude 
 #include "math_utils.h"
 
+/**
+ * @public
+ * The main program entry point.
+ * @param any args
+ * @return code
+ */
 int main() {
     int sum = add(5, 3);
     float product = multiply(2.5f, 4.0f);
