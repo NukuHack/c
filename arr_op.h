@@ -2,8 +2,8 @@
 #ifndef ARR_OP_H
 #define ARR_OP_H
 
-#include <stdlib.h>
-#include <stddef.h> // should use size_t from this, instead of "int" for length
+#include <stdlib.h> // NULL
+#include <stddef.h> // size_t
 
 #if defined(__GNUC__) || defined(__clang__)
 #  define LAMBDA(ret, args, body) __extension__ ({ ret lambda_fn_ args body lambda_fn_; })

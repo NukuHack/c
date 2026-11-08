@@ -1,4 +1,3 @@
-
 #ifndef RAND_H
 #define RAND_H
 
@@ -7,17 +6,31 @@
 void     seed_rng(uint64_t seed);
 
 uint64_t randu64(void);                          /* raw 64-bit */
-double   rand01(void);                           /* uniform [0, 1) */
-double   randd(double min, double max);          /* uniform [min, max) */
-int      randb(void);                            /* 0 or 1 */
 
-int      randi(void);                            /* full int range */
-int      randi_range(int min, int max);          /* uniform [min, max] inclusive */
+/* floating point */
+double   randd(void);                            /* [0, 1)         */
+double   randd_r(double min, double max);        /* [min, max)     */
+float    randf(void);                            /* [0, 1)         */
+float    randf_r(float min, float max);          /* [min, max)     */
 
-long     randl(void);                            /* full long range */
-long     randl_range(long min, long max);        /* uniform [min, max] inclusive */
+/* bool */
+int      randb(void);                            /* 0 or 1         */
 
-double   randn(void);                            /* standard normal N(0,1) */
+/* integer family — same shape for every width */
+int                randi(void);                  /* full int        */
+int                randi_r(int min, int max);    /* [min, max]      */
+unsigned           randu(void);
+unsigned           randu_r(unsigned min, unsigned max);
+long               randl(void);
+long               randl_r(long min, long max);
+unsigned long      randul(void);
+unsigned long      randul_r(unsigned long min, unsigned long max);
+long long          randll(void);
+long long          randll_r(long long min, long long max);
+unsigned long long randull(void);
+unsigned long long randull_r(unsigned long long min, unsigned long long max);
+
+/* normal */
+double   randn(void);    /* (0, 1)         */
 
 #endif /* RAND_H */
-

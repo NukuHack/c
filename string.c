@@ -3,7 +3,7 @@
 // impl
 #include <stdlib.h>
 #include "input.h"
-#include "small_lib.h"
+#include "my_utils.h"
 
 #ifndef DYN_STR
 #define DYN_STR // we already have it imported ... might aswell use it

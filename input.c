@@ -1,21 +1,20 @@
-// self
-#include "input.h"
-// impl
-#include <limits.h>
-#include <math.h>
+#include "input.h" // self
+#include <limits.h> // limit for overflow checking
+#include <math.h> // double stuff for overflow checking
 #include <errno.h> // error checking mainly "EOF" and "strto<num>()" builtin stuff
-#include "small_lib.h" /* for IO */
-#include <ctype.h>
+#include "my_utils.h" // basic io
+#include <ctype.h> // isspace and such char methods
+#include <stdlib.h> // basic memory & NULL
+
 #ifdef DYN_STR /* DYN_STR */
-#include "string.h"
+#  include "string.h"
 #else /* DYN_STR */
-#include <stdlib.h> // still atleast a single malloc is needed ...
-
-#ifndef BUF_LEN
-#define BUF_LEN 100
-#endif
-
+#  ifndef BUF_LEN
+#    define BUF_LEN 100
+#  endif
 #endif /* DYN_STR */
+
+#define IO stdin,stdout
 
 int input_main(void) {
     int size = inp_int_s("number: ", 0, 10);
@@ -64,6 +63,23 @@ static void new_line(FILE *out) {
     fflush(out);
 }
 
+void handle_eof(FILE *in, FILE *out) {
+        clearerr(in);
+        new_line(out);
+}
+bool should_drain(inp_res s) {
+    switch (s) {
+        default:
+        case INPUT_EOF:
+        case INPUT_EMPTY:
+        case INPUT_OK: return false;
+        case INPUT_SEP:
+        case INPUT_NAN:
+        case INPUT_OVERFLOW:
+        case INPUT_RANGE:
+        case INPUT_STOPPED: return true;
+    }
+}
 const char *input_status_str(inp_res s) {
     switch (s) {
         case INPUT_OK: return "ok"; // 123
@@ -72,7 +88,7 @@ const char *input_status_str(inp_res s) {
         case INPUT_EOF: return "end of input"; // EOF
         case INPUT_EMPTY: return "empty"; //  \n  -  \r\n
         case INPUT_RANGE: return "out of range"; // [10;40] - 300
-        case INPUT_STOPPED: return "stopped at non-closing char"; // 1234apple
+        case INPUT_STOPPED: return "stopped (partially usable input)"; // 1234a
         case INPUT_OVERFLOW: return "overflow"; // more than 2^64 ...
     }
     return "unknown";
@@ -279,7 +295,7 @@ inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, con
 
     if (isinf(d)) {
         // in a real double input infinity would be acceptable, but here it is not
-        // since we doN't parse strings infinity can only occur at overflow
+        // since we don't parse strings infinity can only occur at overflow
         if (c != EOF) ungetc(c, in);
         return INPUT_OVERFLOW;
     } else if (d < min || d > max) {
@@ -319,23 +335,23 @@ void drain_line(FILE *in) {
        cursor is still sitting at the end of the current line, so
        emit one ourselves to keep prompts/errors on their own line */
     if (c == EOF) {
-        clearerr(in);
-        new_line(stdout);
+        handle_eof(in, stdout);
     }
 }
-
-// high level inputs have a min-max of 10K, reason being ... nothing
-// usually we take in that kind of numbers, if a number is over 10k the caller should be explicit
 
 void finp(void) {
     drain_line(stdin);
 }
+
+// high level inputs have a min-max of 10K, reason being ... nothing
+// usually we take in that kind of numbers, if a number is over 10k the caller should be explicit
 
 int inp_int(void) {
     return inp_int_s("input an int: ", -10000, 10000);
 }
 uint inp_uint(void) {
     // TODO : make a real impl.
+    // reject negative numbers
     return (uint)inp_int_s("input a uint: ", 0, 10000);
 }
 double inp_double(void) {
@@ -358,48 +374,23 @@ int inp_int_s(const char* text, int min, int max) {
 read:
     r = input_int(stdin, stdout, &val, min, max, text);
 
+    if (should_drain(r))
+        drain_line(stdin);
+
     switch (r) {
-        default:
-            err("Unreachable");
-            return 0;
-
+        case INPUT_OK:
+            return val;
         case INPUT_EOF:
-            clearerr(stdin);
-            print("\nclosed input, but retry");
+            handle_eof(IO);
+            print("closed input, but retry");
             goto read;
-
-        case INPUT_EMPTY:
-            print("input something");
-            goto read;
-
-        case INPUT_NAN:
-            drain_line(stdin);
-            print("input a number");
-            goto read;
-
-        case INPUT_OVERFLOW:
-            drain_line(stdin);
-            print("number way too big");
-            goto read;
-
         case INPUT_RANGE:
-            drain_line(stdin);
             printf("input a number in [%d,%d]\n", min, max);
             goto read;
-
-        case INPUT_STOPPED:
-            drain_line(stdin);
-            print("one single simple number (int)");
+        default:
+            print(input_status_str(r));
             goto read;
-
-        case INPUT_SEP:
-            drain_line(stdin);
-            print("incorrect separator");
-            goto read;
-
-        case INPUT_OK: break;
     }
-    return val;
 }
 
 double inp_double_s(const char* text, double min, double max) {
@@ -410,48 +401,23 @@ double inp_double_s(const char* text, double min, double max) {
 read:
     r = input_double(stdin, stdout, &val, min, max, text);
 
+    if (should_drain(r))
+        drain_line(stdin);
+
     switch (r) {
-        default:
-            err("Unreachable");
-            return 0;
-
+        case INPUT_OK:
+            return val;
         case INPUT_EOF:
-            clearerr(stdin);
-            print("\nclosed input, but retry");
+            handle_eof(IO);
+            print("closed input, but retry");
             goto read;
-
-        case INPUT_EMPTY:
-            print("input something");
-            goto read;
-
-        case INPUT_NAN:
-            drain_line(stdin);
-            print("input a real number");
-            goto read;
-
-        case INPUT_OVERFLOW:
-            drain_line(stdin);
-            print("number way too big");
-            goto read;
-
         case INPUT_RANGE:
-            drain_line(stdin);
             printf("input a number in [%f,%f]\n", min, max);
             goto read;
-
-        case INPUT_STOPPED:
-            drain_line(stdin);
-            print("one single simple number (duble)");
+        default:
+            print(input_status_str(r));
             goto read;
-
-        case INPUT_SEP:
-            drain_line(stdin);
-            print("incorrect separator");
-            goto read;
-
-        case INPUT_OK: break;
     }
-    return val;
 }
 
 char inp_char_s(const char* text) {
@@ -464,8 +430,8 @@ read:
 
     ch = fgetc(stdin);
     if (ch == EOF) {
-        clearerr(stdin);
-        print("\ntry again");
+        handle_eof(IO);
+        print("try again");
         goto read;
     }
 
@@ -526,8 +492,8 @@ read:
     }
 
     if (!got_any) { // EOF case
-        clearerr(stdin);
-        print("\ntry again");
+        handle_eof(IO);
+        print("try again");
         sv_free(v);
         goto read;
     }
@@ -546,14 +512,14 @@ char* inp_str_s(const char* text) {
     int read = 0, c;
 read:
     if (text) fputs(text, stdout);
-    clearerr(stdin); // Clear the EOF indicator so getchar() can read again - otherwise inf EOF loop
     c = getchar();
 
     if (c == EOF) {
-        print("\ntry again");
+        handle_eof(IO);
+        print("try again");
         goto read;
     } else if (c == '\n')
-        goto memalloc; // we do allow empty, caller should handle it
+        goto memalloc; // we do allow empty
 
     tmp[0] = (char)c;
     read = 1;
@@ -561,7 +527,7 @@ read:
     while ((c = getchar()) != '\n' && read < BUF_LEN) {
         /* EOF after a partial line: accept what we got */
         if (c == EOF) {
-            fputs("\n", stdout); // put a new line bc EOF
+            handle_eof(IO);
             break;
         }
         tmp[read++] = (char)c;
@@ -574,7 +540,7 @@ memalloc:
         err("malloc failed");
         return NULL;
     }
-    for (int i = 0; i < read; i++)
+    for (int i = 0; i < read; i++) // memcopy
         str[i] = tmp[i];
     str[read] = '\0';
     return str;
@@ -585,9 +551,6 @@ memalloc:
 /* parsers */
 // since they already have the string in memory going char-by-char is worse, so just use the standard
 // "strto_" methods to convert from string to numbers nicely
-// 
-// errno is ... idk some global thingy, used bc. ai said it would make it better ...
-// not sure how frequent is real overflow tho, but just to be safe : here you go
 int parse_int(const char *text, int *num) {
     if (!text || !num) return -1;
     char *endptr;

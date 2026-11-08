@@ -1,7 +1,6 @@
-#include "arr_op.h"
-
-#include <stdio.h>
-#include "small_lib.h"
+#include "arr_op.h" // self
+#include <stdio.h> // printf
+#include "my_utils.h" // for random
 
 #define LENGTH 20
 

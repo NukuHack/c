@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include "small_lib.h"
+#include "my_utils.h"
 #include <unistd.h>
 
 #define SIZE 64
