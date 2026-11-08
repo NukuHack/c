@@ -18,6 +18,8 @@
 #define IO stdin,stdout
 #define destroy(a) do { free(a);a=NULL; }while(0)
 
+typedef bool(predicate)(int);
+
 int input_main(void) {
     int size = inp_int_s("inp number [0,10]: ", 0, 10);
     printf("got: %d\n", size);
@@ -317,7 +319,7 @@ inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, con
     return stopped ? INPUT_STOPPED : INPUT_OK;
 }
 
-void input_char(FILE *in, FILE *out, char *v, bool(*filter)(int), const char *prompt) {
+void input_char(FILE *in, FILE *out, char *v, predicate *filter, const char *prompt) {
     int c, ch;
 read:
     if (prompt && out) { fputs(prompt, out); fflush(out); }
@@ -347,7 +349,7 @@ read:
         goto read;
     }
 
-    if (filter && !filter(ch)) {
+    if (filter && filter(ch)) {
         print("wrong char [not allowed]");
         goto read;
     }
@@ -459,9 +461,10 @@ read:
     }
 }
 
+
 char inp_char_s(const char* text) {
     char c;
-    input_char(stdin, stdout, &c, isalpha, text);
+    input_char(stdin, stdout, &c, (predicate*)isalpha, text);
     return c;
 }
 
