@@ -1,58 +1,43 @@
 // self
 #include "string.h"
 // impl
+#include <stdlib.h>
+#include "input.h"
 #include "small_lib.h"
 
+#ifndef DYN_STR
+#define DYN_STR // we already have it imported ... might aswell use it
+#endif
 
 int string_main(void) {
     char* str = inp_str();
+    if (!str)
+        err("could not read input");
+    print(str);
     free(str);
 
     return 0;
 }
 
-bool is_alpha(char inp) {
-    return (inp >= 'a' && inp <= 'z') || (inp >= 'A' && inp <= 'Z');
-}
-bool is_numeric(char inp) {
-    return inp >= '0' && inp <= '9';
-}
-bool is_alnum(char inp) {
-    return is_numeric(inp) || is_alpha(inp);
-}
-char to_upper(char inp) {
-    return (inp >= 'a' && inp <= 'z') ? inp - 32 : inp;
-}
-char to_lower(char inp) {
-    return (inp >= 'A' && inp <= 'Z') ? inp + 32 : inp;
-}
-
-int str_len(const char* str) {
-    if (!str) return 0;
-    const char* p = str;
-    while(*p) p++; // pointer walk
-    return (int)(p-str);
-}
-
+// ptr to first in alphab. ord.
 char* alphabetic(char* a, char* b) {
     if (!a || !b || a == b)
         return NULL;
 
-    int len1 = str_len(a);
-    int len2 = str_len(b);
-    int len = len1 > len2 ? len2 : len1;
-
-    for (int i = 0; i<len; i++) {
-        char ac = to_upper(a[i]);
-        char bc = to_upper(b[i]);
+    char *ap = a, *bp = b;
+    for (;;ap++, bp++) {
+        char ac = toupper(*ap);
+        char bc = toupper(*bp);
+        if (!ac || !bc) {
+            if (!ac && !bc)
+                return NULL; // equal
+            return !ac ? a : b; // shorter comes first
+        }
         if (ac != bc)
             return ac > bc ? b : a;
     }
 
-    return
-        len < len1 ? b :
-        len < len2 ? a :
-        NULL;
+    return NULL;
 }
 
 struct String {

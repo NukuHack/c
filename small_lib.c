@@ -5,33 +5,24 @@
 #include <stdlib.h>
 #include <time.h>
 #include <limits.h>
+#include <stdbool.h>
 
-#define STR_BUF 100
+#ifdef _WIN32
+    #include <windows.h>
+    #include <conio.h>
+#else
+    #include <unistd.h>
+    #include <termios.h>
+    #include <sys/ioctl.h>
+#endif
 
-int lib_main(void) {
-    int size = inp_int_s("number: ", 0, 10);
-    printf("got: %d\n", size);
-
-    char* str = inp_str();
-    print(str);
-    free(str);
-    str = NULL;
-
-    char c = inp_char();
-    printf("got char : %c\n", c);
-
-    double d = inp_double();
-    printf("double: %lf\n", d);
-
-    print("10 random double:");
-    for (int i = 0; i < 10; i++) {
-        printf("%d), %lf\n", i, rand_double());
+static bool seeded = false;
+int rand_int(int min, int max) {
+    if (!seeded) {
+        srand((unsigned)time(NULL));
+        seeded = true;
     }
 
-    return 0;
-}
-
-int rand_int(int min, int max) {
     if (min == max)
         return max;
 
@@ -46,6 +37,11 @@ int rand_int(int min, int max) {
 }
 
 double rand_double(void) {
+    if (!seeded) {
+        srand((unsigned)time(NULL));
+        seeded = true;
+    }
+
     return (double)rand() / ((double)RAND_MAX + 1);
 }
 
@@ -55,8 +51,20 @@ void print(const char* str) {
 }
 
 void clear(void) {
-    fputs("\033[H\033[J", stdout);
-    fflush(stdout);
+    #ifdef _WIN32
+        system("cls");
+    #else
+        fputs("\033[H\033[J", stdout);
+        fflush(stdout);
+    #endif
+}
+
+void slep(int millis) {
+    #ifdef _WIN32
+        Sleep(millis);
+    #else
+        sleep(millis / 1000);
+    #endif
 }
 
 void err(const char* str) {

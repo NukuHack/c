@@ -4,96 +4,84 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include "small_lib.h"
-#include "string.h"
+#include <stdint.h> // SIZE_MAX
+#include "small_lib.h" // print
 
-struct List {
-    size_t len;
-    size_t sz;
-    void** arr;
-};
-
-int list_main(void) {
-    List* list = LIST_VTABLE.make();
-    if (!list) {
-        err("list creation failed");
-        return 1;
-    }
-
-    int inp = inp_int_s("how much input: ", 3, 100);
-
-    for (int i = 0; i < inp; i++) {
-        int tmp = inp_int();
-        int* val = (int*)malloc(sizeof(tmp));
-        if (!val) {
-            err("malloc failed on item");
-            goto free;
-        }
-        *val = tmp;
-        if (!LIST_VTABLE.put(list, val)) {
-            free(val);
-            err("failed put in list");
-            goto free;
-        }
-    }
-    LIST_VTABLE.print(list);
-
-free:
-    LIST_VTABLE.free(list);
-    list = NULL;
-
-    return 0;
-}
-
-List* list_make(void) {
+List *list_make(void) {
     return list_make_sz(DEF_SIZE);
 }
 
-List* list_make_sz(size_t size) {
-    if (size < 1) { // check
-        err("too small");
+List *list_make_sz(size_t size) {
+    List *list = (List*)malloc(sizeof(List));
+    if (!list_init_sz(list, size)) {
+        free(list);
         return NULL;
     }
+    return list;
+}
 
-    List* list = (List*)malloc(sizeof(List));
+bool list_init(List *list) {
+    return list_init_sz(list, DEF_SIZE);
+}
+
+bool list_init_sz(List *list, size_t size) {
     if (!list) {
-        err("malloc failed");
-        return NULL;
+        err("NPE");
+        return false;
     }
-
+    if (size == 0) {
+        list->arr = NULL;
+        list->len = 0;
+        list->sz = 0;
+        return true;
+    }
+    /* if (list->sz || list->len || list->arr) {
+        err("List is not in a null state");
+        return false;
+    } */
     void **arr = (void**)malloc(sizeof(*arr) * size);
     if (!arr) {
         err("malloc failed");
-        free(list);
-        return NULL;
+        return false;
     }
 
     list->arr = arr;
     list->len = 0;
     list->sz = size;
-    return list;
+    return true;
 }
 
-void list_free(List* list) {
+void list_free(List *list) {
     list_free_fn(list, free);
 }
-
-void list_free_fn(List* list, void (*free_fn)(void*)) {
-    if (list) {
-        void** arr = list->arr;
-        if (arr) {
-            if (free_fn) {
-                for (size_t i = 0; i < list->len; i++) {
-                    free_fn(arr[i]);
-                }
-            }
-            free(arr);
+void list_free_fn(List *list, void (*free_fn)(void*)) {
+    list_nuke_fn(list, free_fn);
+    free(list);
+}
+void list_nuke(List *list) {
+    list_nuke_fn(list, free);
+}
+void list_nuke_fn(List *list, void (*free_fn)(void*)) {
+    if (!list) return;
+    
+    void **arr = list->arr;
+    size_t len = list->len;
+    list->sz = 0;
+    list->len = 0;
+    if (!arr)
+        return;
+    
+    if (free_fn)
+        for (size_t i = 0; i < len; i++) {
+            free_fn(arr[i]);
         }
-        free(list);
-    }
+    else
+        err("items leaked");
+    free(arr);
+    list->arr = NULL;
 }
 
-void** list_free_get(List* list) {
+void **list_free_get(List *list) {
     if (!list) {
         return NULL;
     }
@@ -102,13 +90,13 @@ void** list_free_get(List* list) {
     return arr;
 }
 
-void* list_get(const List* list, size_t idx) {
+void *list_get(const List *list, size_t idx) {
     if (!list) { err("NPE"); /* null pointer */ return NULL; }
     if (idx >= list->len) { err("IOB"); /* index out of bounds */ return NULL; }
     return list->arr[idx];
 }
 
-void** list_get_all(List* list) {
+void **list_get_all(List *list) {
     if (!list) {
         err("NPE");
         return NULL;
@@ -116,19 +104,19 @@ void** list_get_all(List* list) {
     return list->arr;
 }
 
-size_t list_len(const List* list) {
+size_t list_len(const List *list) {
     return list ? list->len : 0;
 }
 
-bool list_put(List* list, void* val) {
+bool list_put(List *list, void *val) {
     if (!list || !val) {
         err("NPE");
         return false;
     }
 
     if (list->sz == list->len) {
-        if (!list_resize(list, list->sz * 2)) {
-            err("resize failed");
+        if (!list_grow(list)) {
+            err("reserve failed");
             return false;
         }
     }
@@ -138,13 +126,9 @@ bool list_put(List* list, void* val) {
     return true;
 }
 
-bool list_ins(List* list, void* item, size_t idx) {
-    if (!list) {
+bool list_ins(List *list, void *item, size_t idx) {
+    if (!list || !item) {
         err("NPE");
-        return false;
-    }
-    if (!item) {
-        err("cannot insert NULL");
         return false;
     }
     if (idx > list->len) {
@@ -153,8 +137,8 @@ bool list_ins(List* list, void* item, size_t idx) {
     }
 
     if (list->len == list->sz) {
-        if (!list_resize(list, list->sz * 2)) {
-            err("resize failed");
+        if (!list_grow(list)) {
+            err("reserve failed");
             return false;
         }
     }
@@ -169,7 +153,7 @@ bool list_ins(List* list, void* item, size_t idx) {
     return true;
 }
 
-void* list_pop(List* list) {
+void *list_pop(List *list) {
     if (!list) {
         err("NPE");
         return NULL;
@@ -181,8 +165,8 @@ void* list_pop(List* list) {
         return NULL;
     }
 
-    void** arr = list->arr;
-    void* item = arr[len - 1];
+    void **arr = list->arr;
+    void *item = arr[len - 1];
     if (!item) {
         err("NPE");
         return NULL;
@@ -193,7 +177,7 @@ void* list_pop(List* list) {
     return item;
 }
 
-void* list_rem(List* list, size_t idx) {
+void *list_rem(List *list, size_t idx) {
     if (!list) {
         err("NPE");
         return NULL;
@@ -205,8 +189,8 @@ void* list_rem(List* list, size_t idx) {
         return NULL;
     }
 
-    void** arr = list->arr;
-    void* item = arr[idx];
+    void **arr = list->arr;
+    void *item = arr[idx];
 
     for (size_t i = idx; i < len - 1; i++) {
         arr[i] = arr[i + 1];
@@ -217,59 +201,116 @@ void* list_rem(List* list, size_t idx) {
     return item;
 }
 
-void* list_rep(List* list, void* val, size_t idx) {
-    void* ret = list_get(list, idx);
-    if (!ret) {
-        // could only be Null on NPE or IOB, what would be checked here too
+void *list_rep(List *list, void *val, size_t idx) {
+    void *ret = list_get(list, idx);
+    // could only be Null on NPE or IOB, what would be checked here too
+    if (!ret || !val)
         return NULL;
-    }
     list->arr[idx] = val;
     return ret;
 }
-
-bool list_resize(List* list, size_t size) {
+// reserve - basic
+bool list_reserve(List *list, size_t size) {
     if (!list) {
         err("NPE");
         return false;
     }
-    if (size < 1) {
-        err("too smol");
-        return false;
-    }
-
-    size_t old = list->sz;
-    if (old == size)
+    if (list->sz >= size)
         return true;
-    else if (old > size)
-        return false;
 
-    void** arr = (void**)realloc(list->arr, (sizeof *arr) * size);
-    if (!arr) {
-        err("realloc fail");
+    void **arr = (void**)realloc(list->arr, (sizeof *arr) * size);
+    if (!arr)
         return false;
-    }
     list->arr = arr;
     list->sz = size;
     return true;
 }
-
-bool list_turncate(List* list, size_t size) {
-    return list_turncate_fn(list, size, free);
+bool list_grow(List *list) {
+    if (list->sz > SIZE_MAX / 2) return false;
+    return list_reserve(list, list->sz == 0 ? DEF_SIZE : list->sz * 2);
 }
-bool list_turncate_fn(List* list, size_t size, void (*free_fn)(void*)) {
+// growing
+bool list_resize(List *list, size_t size, size_t byte) {
     if (!list) {
         err("NPE");
         return false;
     }
-    // you may even resize it to 0 - freeing the entire thing
+    if (byte == 0) {
+        err("to reserve memory we needs size");
+        return false;
+    }
+    if (list->len == size) {
+        return true;
+    }
+    if (list->len > size) {
+        err("Use truncate/clear for batch deleting items");
+        return false;
+    }
 
+    bool res = list_reserve(list, size);
+    if (!res)
+        return false;
+    void **arr = list->arr;
+    size_t len = list->len, i;
+    for (i = len; i < size; i++)
+        // here we assume caller Knows that we allocated this
+        if (!(arr[i] = (void*)malloc(byte)))
+            goto corre;
+
+    list->len = size;
+    return true;
+
+corre:
+    err("malloc fail");
+    while (i-- > len) free(arr[i]);
+    return false;
+}
+
+bool list_resize_auto(List *list) {
+    if (!list) {
+        err("NPE");
+        return false;
+    }
+
+    size_t sz = list->sz, len = list->len;
+
+    while (sz / 2 > len) {
+        sz /= 2;
+    }
+    return list_truncate(list, sz);
+}
+// clearing
+bool list_clear(List *list) {
+    return list_clear_fn(list, free);
+}
+bool list_clear_fn(List *list, void (*free_fn)(void*)) {
+    if (!list || !free_fn) {
+        err("NPE");
+        return false;
+    }
+    list_nuke_fn(list, free_fn);
+    return true;
+}
+// for shrinking
+bool list_truncate(List *list, size_t size) {
+    return list_truncate_fn(list, size, free);
+}
+bool list_truncate_fn(List *list, size_t size, void (*free_fn)(void*)) {
+    if (!list || !free_fn) {
+        err("NPE");
+        return false;
+    }
     size_t old = list->sz;
     if (old == size)
         return true;
     else if (old < size)
         return false;
+    if (size == 0) {
+        err("use clear instead of truncate to 0");
+        return false;
+    }
 
-    void** data = list->arr;
+    void **data = list->arr;
     // free remaining items if shrinking below current length
     if (list->len > size) {
         for (size_t i = size; i < list->len; i++) {
@@ -278,7 +319,7 @@ bool list_turncate_fn(List* list, size_t size, void (*free_fn)(void*)) {
         list->len = size;
     }
 
-    void** arr = (void**)realloc(data, (sizeof *arr) * size);
+    void **arr = (void**)realloc(data, (sizeof *arr) * size);
     if (!arr) {
         err("realloc failed");
         return false; // shuld return partial true (since we did free stuff)
@@ -289,39 +330,11 @@ bool list_turncate_fn(List* list, size_t size, void (*free_fn)(void*)) {
 
 }
 
-bool list_resize_a(List* list) {
-    if (!list) {
-        err("NPE");
-        return false;
-    }
-
-    size_t sz = list->sz;
-    size_t n_sz = sz;
-    size_t len = list->len;
-
-    while (n_sz / 2 > len) {
-        n_sz /= 2;
-    }
-
-    if (sz == n_sz)
-        return true;
-
-    void** arr = (void**)realloc(list->arr, (sizeof *arr) * n_sz);
-    if (!arr) {
-        err("realloc failed");
-        return false;
-    }
-
-    list->sz = n_sz;
-    list->arr = arr;
-    return true;
-}
-
-void* list_head(const List* list) {
+void *list_head(const List *list) {
     return list_get(list, 0);
 }
 
-void* list_tail(const List* list) {
+void *list_tail(const List *list) {
     if (!list) {
         err("NPE");
         return NULL;
@@ -333,7 +346,7 @@ void* list_tail(const List* list) {
     return list->arr[list->len - 1];
 }
 
-void list_print(const List* list) {
+void list_print(const List *list) {
     if (!list) {
         err("NPE");
         return;
@@ -342,7 +355,7 @@ void list_print(const List* list) {
     printf("list with length: %zu size: %zu\n", list->len, list->sz);
 
     for (size_t i = 0; i < list->len; i++) {
-        int* val = (int*)list->arr[i];
+        int *val = (int*)list->arr[i];
         if (val)
             printf("list[%zu] : %d\n", i, *val);
         else
@@ -350,5 +363,41 @@ void list_print(const List* list) {
     }
 }
 
+
+
+const ListVTable LIST_VTABLE = {
+    .make = list_make,
+    .make_sz = list_make_sz,
+    .init = list_init,
+    .init_sz = list_init_sz,
+    
+    .reserve = list_reserve,
+    .grow = list_grow,
+    .resize = list_resize,
+    .resize_auto = list_resize_auto,
+    .truncate = list_truncate,
+    .truncate_fn = list_truncate_fn,
+    .clear_fn = list_clear_fn,
+    .clear = list_clear,
+    
+    .get = list_get,
+    .get_all = list_get_all,
+    .len = list_len,
+    .put = list_put,
+    .ins = list_ins,
+    .pop = list_pop,
+    .rem = list_rem,
+    .rep = list_rep,
+    .head = list_head,
+    .tail = list_tail,
+    
+    .free = list_free,
+    .free_fn = list_free_fn,
+    .nuke = list_nuke,
+    .nuke_fn = list_nuke_fn,
+    .free_get = list_free_get,
+    
+    .print = list_print
+};
 
 

@@ -28,9 +28,6 @@ static inline bool input_retry(inp_res s) {
 static inline bool input_rejected(inp_res s) {
     return s == INPUT_OVERFLOW || s == INPUT_RANGE || s == INPUT_SEP || s == INPUT_STOPPED;
 }
-static inline bool input_fatal(inp_res s) {
-    return s == INPUT_EOF;
-}
 static inline bool input_drain_required(inp_res s) {
     return s == INPUT_NAN || s == INPUT_STOPPED || s == INPUT_OVERFLOW || s == INPUT_RANGE || s == INPUT_SEP;
 }
@@ -65,7 +62,6 @@ int inp_int_s(const char* text, int min, int max);
 double inp_double_s(const char* text, double min, double max);
 
 /* Backards cmpatiblity ... MY dearest */
-
 
 // parse from string, return the consumed chars
 int parse_int(const char* text, int* num);
