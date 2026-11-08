@@ -5,6 +5,7 @@
 #include <stdbool.h> // bool
 
 #ifndef UINT_TYPE
+#define UINT_TYPE
 typedef unsigned int uint;
 #endif /* UINT_TYPE */
 
@@ -21,16 +22,8 @@ typedef enum {
 } inp_res;
 
 const char *input_status_str(inp_res s);
-
-static inline bool input_retry(inp_res s) {
-    return s == INPUT_EMPTY || s == INPUT_NAN;
-}
-static inline bool input_rejected(inp_res s) {
-    return s == INPUT_OVERFLOW || s == INPUT_RANGE || s == INPUT_SEP || s == INPUT_STOPPED;
-}
-static inline bool input_drain_required(inp_res s) {
-    return s == INPUT_NAN || s == INPUT_STOPPED || s == INPUT_OVERFLOW || s == INPUT_RANGE || s == INPUT_SEP;
-}
+bool input_rejected(inp_res s);
+bool input_drain_required(inp_res s);
 
 /* low-level FILE parsers */
 inp_res input_int(FILE *in, FILE *out, int *v, int min, int max, const char *prompt);
@@ -48,8 +41,6 @@ void drain_line(FILE *in);
 /* "high-level" input functins */
 // the default behaviour of these wrappers are just to get a single thing from stdin output to stdout if incorrect
 // and re-try; make sure EOF is only retried for streams that support it, and will not just loop forever
-
-void finp(void);
 
 char inp_char(void);
 char* inp_str(void);

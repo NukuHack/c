@@ -14,7 +14,5 @@ char* sv_free_get(String *v);
 bool sv_push(String *v, char c);
 bool sv_reserve(String *v, size_t need);
 
-char* alphabetic(char* a, char* b);
-
 #endif /* MY_STRING_H */
 

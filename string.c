@@ -2,7 +2,6 @@
 #include "string.h"
 // impl
 #include <stdlib.h>
-#include "input.h"
 #include "my_utils.h"
 
 #ifndef DYN_STR
@@ -17,27 +16,6 @@ int string_main(void) {
     free(str);
 
     return 0;
-}
-
-// ptr to first in alphab. ord.
-char* alphabetic(char* a, char* b) {
-    if (!a || !b || a == b)
-        return NULL;
-
-    char *ap = a, *bp = b;
-    for (;;ap++, bp++) {
-        char ac = toupper(*ap);
-        char bc = toupper(*bp);
-        if (!ac || !bc) {
-            if (!ac && !bc)
-                return NULL; // equal
-            return !ac ? a : b; // shorter comes first
-        }
-        if (ac != bc)
-            return ac > bc ? b : a;
-    }
-
-    return NULL;
 }
 
 struct String {

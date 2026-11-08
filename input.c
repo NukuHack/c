@@ -1,35 +1,36 @@
 #include "input.h" // self
 #include <limits.h> // limit for overflow checking
-#include <math.h> // double stuff for overflow checking
-#include <errno.h> // error checking mainly "EOF" and "strto<num>()" builtin stuff
+#include <math.h> // double stuff for overflow & NAN
+#include <errno.h> // error checking mainly "EOF" and "strto_()" builtin stuff
 #include "my_utils.h" // basic io
-#include <ctype.h> // isspace and such char methods
+#include <ctype.h> // basic char methods
 #include <stdlib.h> // basic memory & NULL
+#include <string.h> // batch mem op
 
-#ifdef DYN_STR /* DYN_STR */
-#  include "string.h"
-#else /* DYN_STR */
+#if !defined(DYN_STR) /* DYN_STR */
 #  ifndef BUF_LEN
 #    define BUF_LEN 100
 #  endif
+#else
+#  include "string.h" // dyn-mem & struct
 #endif /* DYN_STR */
 
 #define IO stdin,stdout
+#define destroy(a) do { free(a);a=NULL; }while(0)
 
 int input_main(void) {
-    int size = inp_int_s("number: ", 0, 10);
+    int size = inp_int_s("inp number [0,10]: ", 0, 10);
     printf("got: %d\n", size);
 
     char* str = inp_str();
     print(str);
-    free(str);
-    str = NULL;
+    destroy(str);
 
     char c = inp_char();
     printf("got char : %c\n", c);
 
     double d = inp_double();
-    printf("double: %lf\n", d);
+    printf("double: %.3lf\n", d);
 
     print("10 random double:");
     for (int i = 0; i < 10; i++) {
@@ -40,13 +41,13 @@ int input_main(void) {
 }
 /* helpers */
 
-static void consume_crlf_tail(FILE *in) {
+void consume_crlf_tail(FILE *in) {
     int c = fgetc(in);
     if (c == EOF) return;
     if (c != '\n') ungetc(c, in);
 }
 
-static bool finish_number(FILE *in, int c) {
+bool finish_number(FILE *in, int c) {
     if (c == EOF || c == '\n')
         return false;
     if (c == '\r') {
@@ -57,17 +58,21 @@ static bool finish_number(FILE *in, int c) {
     return true;
 }
 
-static void new_line(FILE *out) {
+void new_line(FILE *out) {
     if (!out) return;
     fputc('\n', out);
     fflush(out);
 }
 
 void handle_eof(FILE *in, FILE *out) {
-        clearerr(in);
-        new_line(out);
+    clearerr(in);
+    new_line(out);
 }
-bool should_drain(inp_res s) {
+bool input_rejected(inp_res s) {
+    // reject everything that is not Good or Error
+    return !(s == INPUT_OK || s == INPUT_EOF);
+}
+bool input_drain_required(inp_res s) {
     switch (s) {
         default:
         case INPUT_EOF:
@@ -159,7 +164,7 @@ inp_res input_int(FILE *in, FILE *out, int *v, int min, int max, const char *pro
         if (c != EOF) ungetc(c, in);
         return INPUT_RANGE;
     }
-    
+
     if (c == EOF) {
         clearerr(in);
         new_line(out);
@@ -218,7 +223,7 @@ inp_res input_uint(FILE *in, FILE *out, uint *v, uint min, uint max, const char 
         if (c != EOF) ungetc(c, in);
         return INPUT_RANGE;
     }
-    
+
     if (c == EOF) {
         clearerr(in);
         new_line(out);
@@ -266,10 +271,10 @@ inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, con
 
     while (c >= '0' && c <= '9') {
         // if (norm_digit < 20) {
-          // while double only keeps perfect precission up to digit ~16 i decided to let go of that
-          // so this will parse insainly big (~1e300, aka just barely under inf) big doubles too
-          int_part = int_part * 10.0 + (c - '0');
-          norm_digit++;
+        // while double only keeps perfect precission up to digit ~16 i decided to let go of that
+        // so this will parse insainly big (~1e300, aka just barely under inf) big doubles too
+        int_part = int_part * 10.0 + (c - '0');
+        norm_digit++;
         // }
         c = fgetc(in);
     }
@@ -302,7 +307,7 @@ inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, con
         if (c != EOF) ungetc(c, in);
         return INPUT_RANGE;
     }
-    
+
     if (c == EOF) {
         clearerr(in);
         new_line(out);
@@ -310,6 +315,44 @@ inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, con
     bool stopped = finish_number(in, c);
     if (v) *v = d;
     return stopped ? INPUT_STOPPED : INPUT_OK;
+}
+
+void input_char(FILE *in, FILE *out, char *v, bool(*filter)(int), const char *prompt) {
+    int c, ch;
+read:
+    if (prompt && out) { fputs(prompt, out); fflush(out); }
+
+    ch = fgetc(in);
+    if (ch == EOF) {
+        handle_eof(in, out);
+        print("try again");
+        goto read;
+    }
+
+    if (ch == '\n' || ch == '\r') {
+        if (ch == '\r') consume_crlf_tail(in);
+        print("input a char (char)");
+        goto read;
+    }
+
+    c = fgetc(in);
+    if (c == '\r') {
+        consume_crlf_tail(in);
+        c = '\n';
+    }
+
+    if (c != '\n' && c != EOF) { // EOF case
+        drain_line(in);
+        print("input a char (char)");
+        goto read;
+    }
+
+    if (filter && !filter(ch)) {
+        print("wrong char [not allowed]");
+        goto read;
+    }
+
+    *v = (char)ch;
 }
 
 /*  separator  */
@@ -337,10 +380,6 @@ void drain_line(FILE *in) {
     if (c == EOF) {
         handle_eof(in, stdout);
     }
-}
-
-void finp(void) {
-    drain_line(stdin);
 }
 
 // high level inputs have a min-max of 10K, reason being ... nothing
@@ -374,7 +413,7 @@ int inp_int_s(const char* text, int min, int max) {
 read:
     r = input_int(stdin, stdout, &val, min, max, text);
 
-    if (should_drain(r))
+    if (input_drain_required(r))
         drain_line(stdin);
 
     switch (r) {
@@ -401,7 +440,7 @@ double inp_double_s(const char* text, double min, double max) {
 read:
     r = input_double(stdin, stdout, &val, min, max, text);
 
-    if (should_drain(r))
+    if (input_drain_required(r))
         drain_line(stdin);
 
     switch (r) {
@@ -421,48 +460,13 @@ read:
 }
 
 char inp_char_s(const char* text) {
-    int c, ch;
-read:
-    if (text) {
-        fputs(text, stdout);
-        fflush(stdout);
-    }
-
-    ch = fgetc(stdin);
-    if (ch == EOF) {
-        handle_eof(IO);
-        print("try again");
-        goto read;
-    }
-
-    if (ch == '\n' || ch == '\r') {
-        if (ch == '\r') consume_crlf_tail(stdin);
-        print("input a char (char)");
-        goto read;
-    }
-
-    c = fgetc(stdin);
-    if (c == '\r') {
-        consume_crlf_tail(stdin);
-        c = '\n';
-    }
-
-    if (c != '\n' && c != EOF) { // EOF case
-        drain_line(stdin);
-        print("input a char (char)");
-        goto read;
-    }
-
-    if (!isalpha((unsigned char)ch)) {
-        print("wrong char [a-zA-Z]");
-        goto read;
-    }
-
-    return (char)ch;
+    char c;
+    input_char(stdin, stdout, &c, isalpha, text);
+    return c;
 }
 
-#ifdef DYN_STR /* DYN_STR */
-char *inp_str_s(const char* text) {
+#if defined(DYN_STR) /* DYN_STR */
+char *inp_str_s(const char *text) {
     String *v;
     int got_any, c;
 read:
@@ -504,14 +508,61 @@ free:
     sv_free(v);
     return NULL;
 }
-#else /* DYN_STR */
+#elif defined(FGETS_STR)
+char *inp_str_s(const char *text) {
+    char tmp[BUF_LEN], *str;
+    int red;
+    bool hadN;
+read:
+    if (text) {
+        fputs(text, stdout);
+        fflush(stdout);
+    }
+
+    if (fgets(tmp, BUF_LEN, stdin) == NULL) {
+        if (feof(stdin))
+            handle_eof(IO);
+        print("try again");
+        goto read;
+    }
+    // here tmp is nicely set
+    red = strlen(tmp);
+    hadN = false;
+    while (red > 0 && tmp[red-1] == '\n') {
+        // Fgets reads the new line as char, and puts it in the buffer
+        // here I don't want that, so manual removal
+        // TODO: we should also handle windows \r\n
+        tmp[--red] = '\0';
+        hadN = true;
+    }
+   
+    // Check if we read without a newline
+    if (red > 0 && !hadN) {
+        if (feof(stdin)) // EOF
+            handle_eof(IO);
+        else // not EOF -> there is more on the input
+            drain_line(stdin);
+    }
+
+    str = (char*)malloc(sizeof(char) * (red + 1));
+    if (!str) {
+        err("malloc failed");
+        return NULL;
+    }
+    memcpy(str, tmp, red);
+    str[red] = '\0';
+    return str;
+}
+#else /* non DYN and non FGETS */
 // old clunky, but finally works with EOF
 char* inp_str_s(const char* text) {
-    char tmp[BUF_LEN];
-    char* str;
-    int read = 0, c;
+    char tmp[BUF_LEN], *str;
+    int red, c;
 read:
-    if (text) fputs(text, stdout);
+    if (text) {
+        fputs(text, stdout);
+        fflush(stdout);
+    }
     c = getchar();
 
     if (c == EOF) {
@@ -522,27 +573,26 @@ read:
         goto memalloc; // we do allow empty
 
     tmp[0] = (char)c;
-    read = 1;
+    red = 1;
 
-    while ((c = getchar()) != '\n' && read < BUF_LEN) {
+    while ((c = getchar()) != '\n' && red < BUF_LEN) {
         /* EOF after a partial line: accept what we got */
         if (c == EOF) {
             handle_eof(IO);
             break;
         }
-        tmp[read++] = (char)c;
+        tmp[red++] = (char)c;
     }
-    if (read == BUF_LEN)
-        finp();
+    if (red == BUF_LEN)
+        drain_line(stdin);
 memalloc:
-    str = (char*)malloc(sizeof(char) * (read + 1));
+    str = (char*)malloc(sizeof(char) * (red + 1));
     if (!str) {
         err("malloc failed");
         return NULL;
     }
-    for (int i = 0; i < read; i++) // memcopy
-        str[i] = tmp[i];
-    str[read] = '\0';
+    memcpy(str, tmp, red);
+    str[red] = '\0';
     return str;
 }
 #endif /* DYN_STR */

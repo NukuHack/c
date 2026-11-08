@@ -1,5 +1,4 @@
 #include "my_utils.h" // self
-#include <stddef.h> // size_t as length
 #include <stdlib.h> // NULL
 #include <time.h> // time, random seeding
 #include <limits.h> // RAND_MAX
@@ -70,6 +69,9 @@ void print(const char* str) {
     if (str) fputs(str, stdout);
     fputs("\n", stdout);
 }
+void printn(void) {
+    print(NULL);
+}
 void printi(int num) {
     fprintf(stdout, "%d\n", num);
 }
@@ -100,4 +102,103 @@ void slep(double millis) {
     #endif
 }
 
+// ptr to first in alphab. ord.
+char *alphabetic(char *a, char *b) {
+    int r = 0;
+    if (!a || !b || a == b || (r = strcmp(a, b)) == 0)
+        return NULL;
+    return (r > 0) ? b : a;
+#if 0
+    // while this works for nice (ascii a-z&A-Z) chars any other stuff
+    // like numbers, non ascii chars or anything if got in it would break
+    char *ap = a, *bp = b;
+    for (;;ap++, bp++) {
+        char ac = toupper(*ap);
+        char bc = toupper(*bp);
+        if (!ac || !bc) {
+            if (!ac && !bc)
+                return NULL; // equal
+            return !ac ? a : b; // shorter comes first
+        }
+        if (ac != bc)
+            return ac > bc ? b : a;
+    }
+
+    return NULL;
+#endif
+}
+
+#if 0 // taken from `https://en.cppreference.com/c/string/byte/strpbrk`
+int main(void)
+{
+    const char* str = "hello world, friend of mine!";
+    const char* sep = " ,!";
+
+    unsigned int cnt = 0;
+    do
+    {
+        str = strpbrk(str, sep); // find separator
+        if(str) str += strspn(str, sep); // skip separator
+        ++cnt; // increment word count
+    }
+    while(str && *str);
+
+    printf("There are %u words\n", cnt);
+}
+#endif
+int count_words(const char *str, const char *sep) {
+    int cnt = 0;
+    do {
+        str = strpbrk(str, sep); // find separator
+          // if we use string-span instead of skip one char
+          // we also skip multiple of the separators if present
+          // like "apple    tree" is still 2 words
+        if(str) str += strspn(str, sep); // skip separator
+        ++cnt; // increment word count
+    } while(str && *str);
+    return cnt;
+}
+#if 0 // copied from `https://en.cppreference.com/c/string/byte/strtok`
+      // decided not to use this, since it has "complex" internal state (atleast a ptr)
+      // what is unreliable in concurrent or any "future" context
+#define __STDC_WANT_LIB_EXT1__ 1
+#include <stdio.h>
+#include <string.h>
+
+int main(void)
+{
+    char input[] = "A bird came down the walk";
+    printf("Parsing the input string '%s'\n", input);
+    char* token = strtok(input, " ");
+    while (token)
+    {
+        puts(token);
+        token = strtok(NULL, " ");
+    }
+
+    printf("Contents of the input string now: '");
+    for (size_t n = 0; n < sizeof input; ++n)
+        input[n] ? putchar(input[n]) : fputs("\\0", stdout);
+    puts("'");
+
+#ifdef __STDC_LIB_EXT1__ // c11 and upper, not in c99
+    char str[] = "A bird came down the walk";
+    rsize_t strmax = sizeof str;
+    const char* delim = " ";
+    char* next_token;
+    printf("Parsing the input string '%s'\n", str);
+    token = strtok_s(str, &strmax, delim, &next_token);
+    while (token)
+    {
+        puts(token);
+        token = strtok_s(NULL, &strmax, delim, &next_token);
+    }
+
+    printf("Contents of the input string now: '");
+    for (size_t n = 0; n < sizeof str; ++n)
+        str[n] ? putchar(str[n]) : fputs("\\0", stdout);
+    puts("'");
+#endif
+}
+#endif
 
