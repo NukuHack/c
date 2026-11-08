@@ -1,7 +1,6 @@
 // self
 #include "string.h"
 // impl
-
 #include "small_lib.h"
 
 
@@ -82,8 +81,6 @@ void sv_free(String* v) {
 }
 char* sv_free_get(String* v) {
     if (!v) return NULL;
-    if (!v->data)
-        return NULL;
     char* d = v->data;
     free(v);
     return d;
@@ -94,9 +91,9 @@ bool sv_reserve(String *v, size_t need) {
     if (need <= v->sz) return true;
 
     size_t ncap = v->sz ? v->sz * 2 : 128;
-    while (ncap < need) ncap *= 2;
+    while (ncap < need) ncap <<= 1;
 
-    char *p = realloc(v->data, ncap);
+    char *p = (char*)realloc(v->data, ncap);
     if (!p) return false;
 
     v->data = p;
