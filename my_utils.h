@@ -29,6 +29,8 @@ void clear(void);
 void err(const char* str);
 // Sleeps for a given number of milliseconds
 void slep(double millis);
+// temp dir, caller has to free it
+char *temp_dir(void);
 
 // compare, ++ = a bigger, -- = b bigger, 0 = equal
 int cmp(int a, int b);

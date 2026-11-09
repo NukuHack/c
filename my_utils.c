@@ -11,7 +11,10 @@
 #endif /* __NOT_DEFINED */
 
 // for sleep & terminal
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
+#  if !defined(WIN)
+#    define   WIN
+#  endif /* win-def */
 #  include <windows.h>
 #  include <conio.h>
 #else
@@ -26,7 +29,6 @@ int rand_int(int min, int max) {
         srand((unsigned)time(NULL));
         seeded = true;
     }
-
     if (min == max)
         return max;
 
@@ -35,7 +37,6 @@ int rand_int(int min, int max) {
         min = max;
         max = t;
     }
-
     long r = (long)rand() % (long)(max - min + 1);
     return (int)r + min;
 }
@@ -91,7 +92,7 @@ int cmp(int a, int b) {
 }
 
 void clear(void) {
-    #ifdef _WIN32
+    #if defined(WIN)
         system("cls");
     #else
         fputs("\033[H\033[J", stdout);
@@ -100,7 +101,7 @@ void clear(void) {
 }
 
 void slep(double millis) {
-    #ifdef _WIN32
+    #if defined(WIN)
         Sleep(millis);
     #else
         sleep(millis / 1000);
@@ -220,3 +221,24 @@ int main(void)
 }
 #endif
 
+char *temp_dir(void) {
+    char *tmp;
+#if defined(WIN)
+    char arr[1024];
+    GetTempPathA(1024, arr);
+#else
+    char *arr;
+    arr = getenv("TMPDIR");
+    if(!arr) arr = getenv("TMP");
+    if(!arr) arr = getenv("TEMP");
+#endif
+    if (!arr) arr = "/tmp";
+    int l = strlen(arr); // here we assume it is a real dir and not just a '/'
+    tmp = (char*)malloc(sizeof(char) * l + 1);
+    if (!tmp) {
+        err("malloc fail");
+        return NULL;
+    }
+    memcpy(tmp, arr, l + 1);
+    return tmp;
+}
