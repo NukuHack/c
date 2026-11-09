@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>    // strcasecmp
-#include <sys/types.h>  // ssize_t
 #include "da.h"
 
 typedef struct {
@@ -28,7 +27,7 @@ int main(void)
         fputs("> ", stdout);
         fflush(stdout);
 
-        ssize_t n = getline(&buf, &buf_cap, stdin);
+        ptrdiff_t n = getline(&buf, &buf_cap, stdin);
         if (n < 0) break;                      // EOF or read error
 
         // Strip trailing newline / CR.

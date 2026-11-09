@@ -5,6 +5,11 @@
 #include <string.h> // batch-mem op
 #include <stdbool.h> // bool
 
+#ifdef __NOT_DEFINED
+// so i have sintax highlight in "if 0"
+#undef __NOT_DEFINED
+#endif /* __NOT_DEFINED */
+
 // for sleep & terminal
 #ifdef _WIN32
 #  include <windows.h>
@@ -107,8 +112,9 @@ char *alphabetic(char *a, char *b) {
     int r = 0;
     if (!a || !b || a == b || (r = strcmp(a, b)) == 0)
         return NULL;
+    // ++ b first, -- a first, 0 = eq
     return (r > 0) ? b : a;
-#if 0
+#ifdef __NOT_DEFINED
     // while this works for nice (ascii a-z&A-Z) chars any other stuff
     // like numbers, non ascii chars or anything if got in it would break
     char *ap = a, *bp = b;
@@ -128,7 +134,8 @@ char *alphabetic(char *a, char *b) {
 #endif
 }
 
-#if 0 // taken from `https://en.cppreference.com/c/string/byte/strpbrk`
+#ifdef __NOT_DEFINED
+// taken from `https://en.cppreference.com/c/string/byte/strpbrk`
 int main(void)
 {
     const char* str = "hello world, friend of mine!";
@@ -146,6 +153,7 @@ int main(void)
     printf("There are %u words\n", cnt);
 }
 #endif
+
 int count_words(const char *str, const char *sep) {
     int cnt = 0;
     do {
@@ -158,9 +166,19 @@ int count_words(const char *str, const char *sep) {
     } while(str && *str);
     return cnt;
 }
-#if 0 // copied from `https://en.cppreference.com/c/string/byte/strtok`
-      // decided not to use this, since it has "complex" internal state (atleast a ptr)
-      // what is unreliable in concurrent or any "future" context
+
+void strrep(char *str, int len, char old, char upd) {
+    for (; len > 0; len--) {
+        if (str[len] == old) {
+            str[len] = upd;
+        }
+    }
+}
+
+#ifdef __NOT_DEFINED
+// copied from `https://en.cppreference.com/c/string/byte/strtok`
+// decided not to use this, since it has "complex" internal state (atleast a ptr)
+// what is unreliable in concurrent or any "future" context
 #define __STDC_WANT_LIB_EXT1__ 1
 #include <stdio.h>
 #include <string.h>
@@ -181,7 +199,7 @@ int main(void)
         input[n] ? putchar(input[n]) : fputs("\\0", stdout);
     puts("'");
 
-#ifdef __STDC_LIB_EXT1__ // c11 and upper, not in c99
+  #ifdef __STDC_LIB_EXT1__ // c11 and upper, not in c99
     char str[] = "A bird came down the walk";
     rsize_t strmax = sizeof str;
     const char* delim = " ";
@@ -198,7 +216,7 @@ int main(void)
     for (size_t n = 0; n < sizeof str; ++n)
         str[n] ? putchar(str[n]) : fputs("\\0", stdout);
     puts("'");
-#endif
+  #endif
 }
 #endif
 

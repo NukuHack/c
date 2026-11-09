@@ -1,8 +1,6 @@
-// self
-#include "string.h"
-// impl
-#include <stdlib.h>
-#include "my_utils.h"
+#include "string.h" // self
+#include <stdlib.h> // memory
+#include "my_utils.h" // io
 
 #ifndef DYN_STR
 #define DYN_STR // we already have it imported ... might aswell use it
@@ -10,8 +8,10 @@
 
 int string_main(void) {
     char* str = inp_str();
-    if (!str)
+    if (!str) {
         err("could not read input");
+        return 1;
+    }
     print(str);
     free(str);
 

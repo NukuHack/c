@@ -14,6 +14,8 @@ int *cmpp(int *a, int *b);
 char* alphabetic(char* a, char* b);
 /* count the words (separator take in) */
 int count_words(const char *str, const char *sep);
+/* replace all old to upd */
+void strrep(char *str, int len, char old, char upd);
 
 // print the string + \n
 void print(const char* str);

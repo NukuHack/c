@@ -18,8 +18,6 @@
 #define IO stdin,stdout
 #define destroy(a) do { free(a);a=NULL; }while(0)
 
-typedef bool(predicate)(int);
-
 int input_main(void) {
     int size = inp_int_s("inp number [0,10]: ", 0, 10);
     printf("got: %d\n", size);
@@ -41,6 +39,7 @@ int input_main(void) {
 
     return 0;
 }
+
 /* helpers */
 
 void consume_crlf_tail(FILE *in) {
@@ -357,6 +356,19 @@ read:
     *v = (char)ch;
 }
 
+void input_line(FILE *in, FILE *out, char* buff, int buffs, const char *prompt) {
+    if (prompt && out) { fputs(prompt, out); fflush(out); }
+
+    if (fgets(buff, buffs, in) == NULL) {
+        fprintf(out, "could not read any");
+        return;
+    }
+    int len = strlen(buff);
+    strrep(buff, len, '\n', '\0');
+    // correct
+    return;
+}
+
 /*  separator  */
 
 inp_res input_sep(FILE *in, int expected) {
@@ -399,7 +411,7 @@ double inp_double(void) {
     return inp_double_s("input a double: ", -10000, 10000);
 }
 char inp_char(void) {
-    return inp_char_s("input a char: ");
+    return inp_char_s("input an alphabetic char: ", (predicate*)isalpha);
 }
 char* inp_str(void) {
     return inp_str_s("input a line: \n");
@@ -462,9 +474,9 @@ read:
 }
 
 
-char inp_char_s(const char* text) {
+char inp_char_s(const char* text, predicate *filter) {
     char c;
-    input_char(stdin, stdout, &c, (predicate*)isalpha, text);
+    input_char(stdin, stdout, &c, filter, text);
     return c;
 }
 
