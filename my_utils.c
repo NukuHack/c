@@ -221,6 +221,7 @@ int main(void)
 }
 #endif
 
+/* just for testing */
 char *temp_dir(void) {
     char *tmp;
 #if defined(WIN)
@@ -242,3 +243,4 @@ char *temp_dir(void) {
     memcpy(tmp, arr, l + 1);
     return tmp;
 }
+

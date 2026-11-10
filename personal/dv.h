@@ -61,8 +61,7 @@ static void *da__insert_impl(void *items, size_t *count, size_t *cap, size_t ele
     assert(i <= *count);
     items = da__reserve_impl(items, cap, elem_size, *count + 1);
     char *base = (char *)items;
-    memmove(base + (i + 1) * elem_size, base + i * elem_size,
-            (*count - i) * elem_size);
+    memmove(base + (i + 1) * elem_size, base + i * elem_size, (*count - i) * elem_size);
     memcpy(base + i * elem_size, elem, elem_size);
     (*count)++;
     return items;
@@ -72,8 +71,7 @@ static void da__remove_impl(void *items, size_t *count, size_t elem_size, size_t
 {
     assert(i < *count);
     char *base = (char *)items;
-    memmove(base + i * elem_size, base + (i + 1) * elem_size,
-            (*count - i - 1) * elem_size);
+    memmove(base + i * elem_size, base + (i + 1) * elem_size, (*count - i - 1) * elem_size);
     (*count)--;
 }
 
@@ -82,8 +80,7 @@ static void da__remove_unordered_impl(void *items, size_t *count, size_t elem_si
     assert(i < *count);
     char *base = (char *)items;
     if (i != *count - 1)
-        memcpy(base + i * elem_size, base + (*count - 1) * elem_size,
-               elem_size);
+        memcpy(base + i * elem_size, base + (*count - 1) * elem_size, elem_size);
     (*count)--;
 }
 
@@ -91,8 +88,7 @@ static void *da__resize_impl(void *items, size_t *count, size_t *cap, size_t ele
 {
     items = da__reserve_impl(items, cap, elem_size, n);
     if (n > *count)
-        memset((char *)items + (*count) * elem_size, 0,
-               (n - *count) * elem_size);
+        memset((char *)items + (*count) * elem_size, 0, (n - *count) * elem_size);
     *count = n;
     return items;
 }

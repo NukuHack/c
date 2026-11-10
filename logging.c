@@ -19,30 +19,42 @@
 #  define KB 1024
 #endif
 
-log_lvl log_level_global = DEBUG;
 #if defined(LOG_FILE)
 char *log_file = LOG_FILE;
 #else
 char *log_file = NULL;
 #endif
 
+log_lvl log_level_global = DEBUG;
 bool show_color_file = false;
 bool show_color = true;
 bool show_time = true;
 bool use_file = true;
 bool use_stderr = true;
 
+void log_set_global(log_lvl _lvl, bool _show_color, bool _show_color_file, bool _show_time, bool _use_file, bool _use_stderr) {
+    log_level_global = _lvl;
+    show_color_file = _show_color;
+    show_color = _show_color_file;
+    show_time = _show_time;
+    use_file = _use_file;
+    use_stderr = _use_stderr;
+}
+void log_setlvl(log_lvl _lvl) {
+    log_level_global = _lvl;
+}
+
 // in a real logging stuff i would make the FILE* not close at each write
 // and use the buffering (or a custom buffer+flush) system to make it better
 int log_main(void) {
 #if !defined(LOG_FILE)
-    char *tmp = temp_dir();
-    char file[] = "/latest.log";
-    int tmp_l = strlen(tmp);
-    int file_l = strlen(file);
+    char *file = "/latest.log",
+         *tmp = temp_dir();
+    int tmp_l = strlen(tmp),
+        file_l = strlen(file);
     log_file = (char*)malloc(sizeof(char) * (tmp_l + file_l + 1));
     if (!log_file) {
-        err("malloc fail");
+        perror("malloc logfile");
         return 1;
     }
     memcpy(log_file, tmp, tmp_l);
@@ -50,13 +62,14 @@ int log_main(void) {
     memcpy(log_file + tmp_l, file, file_l + 1);
 #endif
     log_clear();
-    log_g("hello world");
+    LOG_WARN("hello world");
     LOG_DEBUG("stuff");
-    log_g("some more");
-    log_l(ERROR, "big bad");
+    LOG_DEBUG("some more");
+    log_line(ERROR, "big bad");
     log_setlvl(WARN);
+    LOG_DEBUG("sme hidden");
     LOG_WARN("Important, %s", "trace : NONE");
-    log_g("some more");
+    LOG_ERROR("some more");
     LOG_ERROR("Fatal %d", 69);
 
 #if !defined(LOG_FILE)
@@ -65,6 +78,16 @@ int log_main(void) {
 
     return 0;
 }
+
+void log_clear(void) {
+    FILE *log_f = fopen(log_file, "w"); // write, creat if non exist, clear if it does
+    if (!log_f) {
+        perror("log file");
+        return;
+    }
+    fclose(log_f);
+}
+
 
 const char *loglvl_col(log_lvl lvl) {
     switch (lvl) {
@@ -87,17 +110,16 @@ const char *loglvl_str(log_lvl lvl) {
     return "UNKNOWN";
 }
 
-void log_g(const char *msg) {
-    log_l(log_level_global, msg);
-}
+void log_line(log_lvl lvl, const char *msg) {
+    if (lvl > log_level_global)
+        return;
 
-void log_a_line(log_lvl lvl, const char *msg) {
     static char t_arr[24] = {0};
     if (show_time)
         time_now(t_arr, 24);
 
     int len = 0;
-    bool endN = true;
+    bool endN = true; // ends with new line
     if (msg && (len = strlen(msg)) > 0)
         endN = msg[len-1] == '\n';
 
@@ -172,20 +194,7 @@ void log_msg(log_lvl lvl, const char *file, int line, const char *fmt, ...) {
     vsnprintf(buf + written, sizeof(buf) - written, fmt, args);
     va_end(args);
 
-    log_a_line(lvl, buf);
-}
-
-void log_clear(void) {
-    FILE *log_f = fopen(log_file, "w"); // write, creat if non exist, clear if it does
-    if (!log_f) {
-        perror("log file");
-        return;
-    }
-    fclose(log_f);
-}
-
-void log_l(log_lvl lvl, const char *msg) {
-    log_a_line(lvl, msg);
+    log_line(lvl, buf);
 }
 
 /* Writes "YYYY-MM-DDTHH:MM:SS.mmm" (local time) into buf, needs 24 bytes. "NULL" = err */
@@ -220,10 +229,6 @@ char *time_now(char *buf, size_t n) {
                      tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
                      tm.tm_hour, tm.tm_min, tm.tm_sec, ms);
     return (k < 0 || (size_t)k >= n) ? NULL : buf;
-}
-
-void log_setlvl(log_lvl lvl) {
-    log_level_global = lvl;
 }
 
 

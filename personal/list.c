@@ -1,11 +1,9 @@
-// self
-#include "list.h"
-// implementation
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
+#include "list.h" // self
+#include <stdlib.h> // mem
+#include <stdio.h> // basic io
+#include <stdbool.h> // bool
 #include <stdint.h> // SIZE_MAX
-#include "my_utils.h"
+#include "my_utils.h" // better io
 
 List *list_make(void) {
     return list_make_sz(DEF_SIZE);

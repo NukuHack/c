@@ -162,9 +162,6 @@
         (xs)->capacity = 0;                                                 \
     } while (0)
 
-#define da_first(xs) ((xs)->count ? &(xs)->items[0] : NULL)
-#define da_last(xs)  ((xs)->count ? &(xs)->items[(xs)->count - 1] : NULL)
-
 // The `it &&` guard avoids NULL + 0 pointer arithmetic (UB in strict C) on
 // a zero-capacity container.
 #define da_foreach(Type, it, xs)                                            \
@@ -238,6 +235,9 @@
 
 #define da_len(xs)     ((xs)->count)
 #define da_get_all(xs) ((xs)->items)
+
+#define da_first(xs) ((xs)->count ? &(xs)->items[0] : NULL)
+#define da_last(xs)  ((xs)->count ? &(xs)->items[(xs)->count - 1] : NULL)
 
 // Returns a pointer to the slot, or NULL if out of range.
 #define da_get(xs, i)                                                       \
