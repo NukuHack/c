@@ -1,19 +1,20 @@
 #include "input.h" // self
 #include <limits.h> // limit for overflow checking
 #include <math.h> // double stuff for overflow & NAN
-#include <errno.h> // error checking mainly "EOF" and "strto_()" builtin stuff
+#include <errno.h> // error checking mainly "EOF" and "errno" at builtin stuff
 #include "my_utils.h" // basic io
 #include <ctype.h> // basic char methods
 #include <stdlib.h> // basic memory & NULL
+#include <stddef.h> // size_t, ptrdiff_t aka ssize_t
 #include <string.h> // batch mem op
 
-#if !defined(DYN_STR) /* DYN_STR */
-#  ifndef BUF_LEN
-#    define BUF_LEN 100
-#  endif
-#else
+#if defined(DYN_STR) /* DYN_STR */
 #  include "string.h" // dyn-mem & struct
 #endif /* DYN_STR */
+
+#ifndef BUF_LEN
+#  define BUF_LEN 100
+#endif
 
 #define IO stdin,stdout
 #define destroy(a) do { free(a);a=NULL; }while(0)
@@ -356,17 +357,64 @@ read:
     *v = (char)ch;
 }
 
-void input_line(FILE *in, FILE *out, char* buff, int buffs, const char *prompt) {
-    if (prompt && out) { fputs(prompt, out); fflush(out); }
+/*
+ * Reads one line from `stream` (any length), including the trailing '\n' if present.
+ * The buffer pointed to by `*lineptr` is allocated/reallocated as needed and is
+ * always NUL-terminated on success.
+ *
+ * On success : returns number of bytes read (excluding the NUL terminator).
+ * On EOF     : returns -1 with no data consumed; errno unchanged.
+ * On error   : returns -1 and sets errno (EINVAL / ENOMEM / whatever fgetc set).
+ *
+ * The caller owns `*lineptr` and must free() it (possible "NULL"/0).
+ */
+ptrdiff_t fgetline(char **lineptr, size_t *n, FILE *stream) {
+    return fgetbatch(lineptr, n, stream, true);
+}
+ptrdiff_t fgetfile(char **bufptr, size_t *n, FILE *stream) {
+    return fgetbatch(bufptr, n, stream, false);
+}
 
-    if (fgets(buff, buffs, in) == NULL) {
-        fprintf(out, "could not read any");
-        return;
+ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *stream, bool stpN) {
+    if (!bufptr || !n || !stream) {
+        errno = EINVAL;
+        return -1;
     }
-    int len = strlen(buff);
-    strrep(buff, len, '\n', '\0');
-    // correct
-    return;
+
+    size_t len = 0;
+    int c;
+
+    while ((c = fgetc(stream)) != EOF) {
+        /* need room for this char + the NUL terminator */
+        if (len + 1 >= *n) {
+            if (*n == 0) { /* if size is 0 */
+                *n = BUF_LEN >> 1;
+            } else if (*n > (size_t)-1 / 2) { /* overflow guard */
+                ungetc(c, stream); /* restore consumed char */
+                errno = ENOMEM;
+                return -1;
+            }
+            size_t new_size = *n * 2;
+            char *p = (char*)realloc(*bufptr, new_size); /* realloc is fine on "NULL" */
+            if (p == NULL) {
+                ungetc(c, stream); /* restore consumed char */
+                errno = ENOMEM;
+                return -1; /* ENOMEM, *lineptr intact */
+            }
+            *bufptr = p;
+            *n = new_size;
+        }
+        (*bufptr)[len++] = (char)c;
+        if (c == '\n' && stpN) break; /* end of line */
+    }
+
+    if (len == 0) {
+        /* Nothing read: either EOF (feof) or an error (ferror). */
+        return -1;
+    }
+
+    (*bufptr)[len] = '\0';
+    return (ptrdiff_t)len;
 }
 
 /*  separator  */

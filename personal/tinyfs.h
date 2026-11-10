@@ -29,7 +29,7 @@ bool tf_readdir(tf_dir *d, struct tf_dirent *ent);
 void tf_closedir(tf_dir *d);
 
 /* Store the parent directory of `path` into `out`.
- * If `path` is a filesystem root ("/" or "C:\"), it is used as-is
+ * If `path` is a filesystem root ("/ " or "C:\ "), it is used as-is
  * (there is nothing above root, so we must not fail). */
 void parent_dir(const char *path, char *out, size_t outsz);
 

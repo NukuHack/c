@@ -36,6 +36,11 @@ inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, con
 // TODO : make it return "inp_res"
 void input_char(FILE *in, FILE *out, char *v, predicate *filter, const char *prompt);
 
+/* basic file op */
+ptrdiff_t fgetline(char **lineptr, size_t *n, FILE *stream);
+ptrdiff_t fgetfile(char **bufptr, size_t *n, FILE *stream);
+ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *stream, bool stpN); // to skip Newlines or not
+
 /* Consume exactly `expected`; otherwise leave the char in the stream. */
 inp_res input_sep(FILE *in, int expected);
 
