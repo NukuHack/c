@@ -3,26 +3,42 @@
 # Usage: ./build.sh          -> build + run
 #        ./build.sh build    -> build only
 
-set -e  # stop on first error
+set -e
 
-# Paths (relative to this script's location)
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC_DIR="$ROOT/base"
 INC_DIR="$ROOT/include"
 BUILD_DIR="$ROOT/build"
 OUT="$BUILD_DIR/main.out"
 
-# 1. Generate headers from every .c file
+# Auto-detect the source directory (base/, basic/, or src/)
+for d in base basic src; do
+    if [ -d "$ROOT/$d" ]; then
+        SRC_DIR="$ROOT/$d"
+        break
+    fi
+done
+if [ -z "$SRC_DIR" ]; then
+    echo "Error: no source directory (base/, basic/, or src/) under $ROOT" >&2
+    exit 1
+fi
+
+# Collect sources
+shopt -s nullglob
+sources=("$SRC_DIR"/*.c)
+shopt -u nullglob
+if [ ${#sources[@]} -eq 0 ]; then
+    echo "Error: no .c files in $SRC_DIR" >&2
+    exit 1
+fi
+
+# 1. Generate headers (single call, all files)
 mkdir -p "$INC_DIR" "$BUILD_DIR"
 echo "==> Generating headers..."
-for src in "$SRC_DIR"/*.c; do
-    [ -e "$src" ] || continue
-    python "$ROOT/header_gen.py" "$src"
-done
+python "$ROOT/header_gen.py" "${sources[@]}"
 
-# 2. Compile everything
+# 2. Compile
 echo "==> Compiling..."
-gcc -Wall -Wextra -g -I"$INC_DIR" -o "$OUT" "$SRC_DIR"/*.c
+gcc -Wall -Wextra -g -I"$INC_DIR" -o "$OUT" "${sources[@]}"
 
 # 3. Run (unless 'build' was passed)
 if [ "$1" != "build" ]; then
