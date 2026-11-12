@@ -2,7 +2,8 @@
 #ifndef LOGGING_H
 #define LOGGING_H
 
-#include <stdlib.h>
+#include <stdlib.h> // null
+#include <stdbool.h> // bool 
 
 typedef enum {
     TRACE = 5,

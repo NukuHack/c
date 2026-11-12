@@ -63,34 +63,27 @@ void arr_fill(int *arr, size_t len, int num) {
             LAMBDA(void, (int *p), { *p = num; }));
 }
 
+// not even public, just ... for fun
+void bubbly(int *arr, size_t len) {
+    for (size_t i = 0; i < len - 1; i++)
+        for (size_t j = 0; j < len - 1 - i; j++)
+            if (arr+j == cmpp(arr + j, arr + j + 1))
+                swap(arr + j, arr + j + 1);
+}
 
 void arr_bubble(int *arr, size_t len) {
     if (!arr || len == 0)
         return;
 
-    for (size_t i = 0; i < len - 1; i++) {
-        for (size_t j = 0; j < len - 1 - i; j++) {
+    for (size_t i = 0; i < len - 1; i++)
+        for (size_t j = 0; j < len - 1 - i; j++)
             if (arr[j] > arr[j + 1]) {
                 int tmp = arr[j];
                 arr[j] = arr[j + 1];
                 arr[j + 1] = tmp;
             }
-        }
-    }
 }
 
-// i made this by myself
-#define array_reverse__disabled(Ty, arr, len)                   \
-do {                                                            \
-    if (!arr || len <= 1) break;                                \
-    for (size_t ar_re__i = 0; ar_re__i < len / 2; ar_re__i++) { \
-        Ty tmp = arr[ar_re__i];                                 \
-        arr[ar_re__i] = arr[len - ar_re__i - 1];                \
-        arr[len - ar_re__i - 1] = tmp;                          \
-    }                                                           \
-} while (0)
-
-// with the help of a clanker
 // "evaulate" everything only once
 #define array_reverse(Ty, arr, len)                                           \
 do {                                                                          \
@@ -115,7 +108,8 @@ void arr_foreach(void **arr, size_t len, void (*fn)(void*)) {
         fn(arr[i]);
 }
 void arr_foreach_int(int *arr, size_t len, void (*fn)(int*)) {
-    if (!arr || !fn || len == 0) return;
+    if (!arr || !fn || len == 0)
+        return;
     for (size_t i = 0; i < len; i++)
         fn(&arr[i]);
 }

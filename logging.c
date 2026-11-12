@@ -1,18 +1,20 @@
+#define _POSIX_C_SOURCE 200809L
 #include "logging.h" // self
 #include "my_utils.h" // utils
 #include <errno.h> // err
 #include <stdio.h> // basic io
 #include <stdbool.h> // bool
 #include <string.h> // mem op
-#include <time.h> // time
 #include <stdarg.h> // va-arg
 
 /* local time */
 #if defined(_WIN32)
 #  include <windows.h>
 #else
+#  include <unistd.h>
 #  include <sys/time.h>
 #endif
+#include <time.h> // time
 
 /* buffer size */
 #if !defined(KB)

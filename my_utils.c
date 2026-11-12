@@ -50,13 +50,6 @@ double rand_double(void) {
     return (double)rand() / ((double)RAND_MAX + 1);
 }
 
-void bubbly(int *arr, size_t len) {
-    for (size_t i = 0; i < len - 1; i++)
-        for (size_t j = 0; j < len - 1 - i; j++)
-            if (arr+j == cmpp(arr + j, arr + j + 1))
-                swap(arr + j, arr + j + 1);
-}
-
 void mem_swap(void *a, void *b, size_t size) {
     char buff[size];
     memcpy(buff, a, size);
