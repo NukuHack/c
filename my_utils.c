@@ -3,12 +3,6 @@
 #include <time.h> // time, random seeding
 #include <limits.h> // RAND_MAX
 #include <string.h> // batch-mem op
-#include <stdbool.h> // bool
-
-#ifdef __NOT_DEFINED
-// so i have sintax highlight in "if 0"
-#undef __NOT_DEFINED
-#endif /* __NOT_DEFINED */
 
 // for sleep & terminal
 #if defined(_WIN32) || defined(_WIN64)
@@ -101,6 +95,18 @@ void slep(double millis) {
     #endif
 }
 
+// does not work yet ... sry
+char **shift_args(int *argc, char ***argv) {
+    if (!argc || !argv || *argc <= 1)
+        return;
+    char **arg = *argv;
+
+    // Move argv pointer forward by one element (one char*)
+    *argv += 1;
+    *argc -= 1;
+    return arg;
+}
+
 // ptr to first in alphab. ord.
 char *alphabetic(char *a, char *b) {
     int r = 0;
@@ -108,46 +114,9 @@ char *alphabetic(char *a, char *b) {
         return NULL;
     // ++ b first, -- a first, 0 = eq
     return (r > 0) ? b : a;
-#ifdef __NOT_DEFINED
-    // while this works for nice (ascii a-z&A-Z) chars any other stuff
-    // like numbers, non ascii chars or anything if got in it would break
-    char *ap = a, *bp = b;
-    for (;;ap++, bp++) {
-        char ac = toupper(*ap);
-        char bc = toupper(*bp);
-        if (!ac || !bc) {
-            if (!ac && !bc)
-                return NULL; // equal
-            return !ac ? a : b; // shorter comes first
-        }
-        if (ac != bc)
-            return ac > bc ? b : a;
-    }
-
-    return NULL;
-#endif
 }
 
-#ifdef __NOT_DEFINED
 // taken from `https://en.cppreference.com/c/string/byte/strpbrk`
-int main(void)
-{
-    const char* str = "hello world, friend of mine!";
-    const char* sep = " ,!";
-
-    unsigned int cnt = 0;
-    do
-    {
-        str = strpbrk(str, sep); // find separator
-        if(str) str += strspn(str, sep); // skip separator
-        ++cnt; // increment word count
-    }
-    while(str && *str);
-
-    printf("There are %u words\n", cnt);
-}
-#endif
-
 int count_words(const char *str, const char *sep) {
     int cnt = 0;
     do {
@@ -173,10 +142,6 @@ void strrep(char *str, int len, char old, char upd) {
 // copied from `https://en.cppreference.com/c/string/byte/strtok`
 // decided not to use this, since it has "complex" internal state (atleast a ptr)
 // what is unreliable in concurrent or any "future" context
-#define __STDC_WANT_LIB_EXT1__ 1
-#include <stdio.h>
-#include <string.h>
-
 int main(void)
 {
     char input[] = "A bird came down the walk";
@@ -192,25 +157,6 @@ int main(void)
     for (size_t n = 0; n < sizeof input; ++n)
         input[n] ? putchar(input[n]) : fputs("\\0", stdout);
     puts("'");
-
-  #ifdef __STDC_LIB_EXT1__ // c11 and upper, not in c99
-    char str[] = "A bird came down the walk";
-    rsize_t strmax = sizeof str;
-    const char* delim = " ";
-    char* next_token;
-    printf("Parsing the input string '%s'\n", str);
-    token = strtok_s(str, &strmax, delim, &next_token);
-    while (token)
-    {
-        puts(token);
-        token = strtok_s(NULL, &strmax, delim, &next_token);
-    }
-
-    printf("Contents of the input string now: '");
-    for (size_t n = 0; n < sizeof str; ++n)
-        str[n] ? putchar(str[n]) : fputs("\\0", stdout);
-    puts("'");
-  #endif
 }
 #endif
 
@@ -235,5 +181,22 @@ char *temp_dir(void) {
     }
     memcpy(tmp, arr, l + 1);
     return tmp;
+}
+
+/**
+ * FILE stuff :
+ * */
+
+bool check_file_exist(const char *name) {
+    FILE *file = fopen(name, "r"); // read does not create
+    if (!file) {
+        // could check for errno, or other thing but for now, just return
+        return false;
+    }
+    if(fclose(file) == 0)
+        return true;
+    else
+        // EOF returned, errno set, for now ignore
+        return true;
 }
 
