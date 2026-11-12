@@ -1,0 +1,77 @@
+#ifndef INPUT_H
+#define INPUT_H
+
+#include <stdio.h> // io
+#include <stdbool.h> // bool
+
+#ifndef UINT_TYPE
+#define UINT_TYPE
+typedef unsigned int uint;
+#endif /* UINT_TYPE */
+
+// used for char, allows stuff that returns true
+typedef bool(predicate)(int);
+
+/* input result */
+typedef enum {
+    INPUT_OK = 0,      /* value read; \n / \r / EOF ended it */
+    INPUT_EOF,         /* EOF before anything */
+    INPUT_EMPTY,       /* first char was \n or \r (consumed) */
+    INPUT_NAN,         /* first char not part of the number (pushed back) */
+    INPUT_OVERFLOW,    /* doesn't fit in the target type */
+    INPUT_STOPPED,     /* parsed a value; stopped at a non-closing char */
+    INPUT_RANGE,       /* outside [min, max] */
+    INPUT_SEP          /* input_sep: expected char not found */
+} inp_res;
+
+const char *input_status_str(inp_res s);
+bool input_rejected(inp_res s);
+bool input_drain_required(inp_res s);
+
+/* low-level FILE parsers */
+inp_res input_int(FILE *in, FILE *out, int *v, int min, int max, const char *prompt);
+inp_res input_uint(FILE *in, FILE *out, uint *v, uint min, uint max, const char *prompt);
+inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, const char *prompt);
+// make it not prtint error, and move re-try outside
+// TODO : make it return "inp_res"
+void input_char(FILE *in, FILE *out, char *v, predicate *filter, const char *prompt);
+
+/* basic file op */
+ptrdiff_t fgetline(char **lineptr, size_t *n, FILE *stream);
+ptrdiff_t fgetfile(char **bufptr, size_t *n, FILE *stream);
+ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *stream, bool stpN); // to skip Newlines or not
+
+/* Consume exactly `expected`; otherwise leave the char in the stream. */
+inp_res input_sep(FILE *in, int expected);
+
+/* Throw away the rest of the current line. */
+void drain_line(FILE *in);
+
+/* "high-level" input functins */
+// the default behaviour of these wrappers are just to get a single thing from stdin output to stdout if incorrect
+// and re-try; make sure EOF is only retried for streams that support it, and will not just loop forever
+
+char inp_char(void);
+char* inp_str(void);
+int inp_int(void);
+double inp_double(void);
+
+char inp_char_s(const char* text, predicate *filter);
+// TODO : make this require a max length
+char* inp_str_s(const char* text);
+int inp_int_s(const char* text, int min, int max);
+double inp_double_s(const char* text, double min, double max);
+
+/* Backards cmpatiblity ... MY dearest */
+
+// parse from string, return the consumed chars
+int parse_int(const char* text, int* num);
+int parse_double(const char* text, double* num);
+int parse_uint(const char* text, uint* num);
+// "bounded" parsers
+int parse_int_b(const char* text, int* num, int min, int max);
+int parse_double_b(const char* text, double* num, double min, double max);
+int parse_uint_b(const char* text, uint* num, uint min, uint max);
+
+#endif /* INPUT_H */
+
