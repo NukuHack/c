@@ -7,7 +7,7 @@ set -e  # stop on first error
 
 # Paths (relative to this script's location)
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC_DIR="$ROOT/c"
+SRC_DIR="$ROOT/base"
 INC_DIR="$ROOT/include"
 BUILD_DIR="$ROOT/build"
 OUT="$BUILD_DIR/main.out"
