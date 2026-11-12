@@ -98,7 +98,7 @@ void slep(double millis) {
 // does not work yet ... sry
 char **shift_args(int *argc, char ***argv) {
     if (!argc || !argv || *argc <= 1)
-        return;
+        return NULL;
     char **arg = *argv;
 
     // Move argv pointer forward by one element (one char*)

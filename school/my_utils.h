@@ -9,17 +9,24 @@
 #include <stdbool.h> // bool
 #include <stddef.h> // size_t as length
 
-#define ARR_L(x) x, ARR_S(x)
-#define ARR_S(x) sizeof(x)/sizeof(x[0])
+#if !defined(ARR_L) && !defined(ARR_S)
+#  define ARR_L(x) x, ARR_S(x)
+#  define ARR_S(x) sizeof(x)/sizeof(x[0])
+#endif /* ARR_L and ARR_S */
 
 #ifdef __NOT_DEFINED
 // so i have sintax highlight in "if 0"
-#undef __NOT_DEFINED
+#  undef __NOT_DEFINED
 #endif /* __NOT_DEFINED */
 
 #ifndef LLU
 #  define LLU long long unsigned int
 #endif /* LLU */
+
+#if !defined(UINT_TYPE) && !defined(uint)
+#  define UINT_TYPE
+#  define uint unsigned int
+#endif /* UINT_TYPE */
 
 /* swap the data of 2 pointers */
 void mem_swap(void *a, void *b, size_t size);

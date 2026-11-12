@@ -4,9 +4,9 @@
 #include <stdio.h> // io
 #include <stdbool.h> // bool
 
-#ifndef UINT_TYPE
-#define UINT_TYPE
-typedef unsigned int uint;
+#if !defined(UINT_TYPE) && !defined(uint)
+#  define UINT_TYPE
+#  define uint unsigned int
 #endif /* UINT_TYPE */
 
 // used for char, allows stuff that returns true

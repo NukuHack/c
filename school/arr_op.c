@@ -4,15 +4,23 @@
 
 #define LENGTH 20
 
+#if !defined(LAMBDA)
+void lambda_random(int *p) {
+    *p = rand_int(0, 100);
+}
+void lambda_print(int *p) {
+    printf("idx:%zu : %d\n", (size_t)(p-arr), *p);
+}
+#endif /* Lambda */
+
 int arr_main(void) {
     int tomb[LENGTH];
-    int *arr = tomb;
 
-    arr_fillR(arr, LENGTH);
-    arr_bubble(arr, LENGTH);
-    arr_rev(arr, LENGTH);
+    arr_fillR(ARR_L(tomb));
+    arr_bubble(ARR_L(tomb));
+    arr_rev(ARR_L(tomb));
 
-    arr_print(arr, LENGTH);
+    arr_print(ARR_L(tomb));
 
     return 0;
 }
@@ -55,12 +63,26 @@ void arr_fillN(int *arr, size_t len) {
 
 void arr_fillR(int *arr, size_t len) {
     arr_foreach_int(arr, len,
-            LAMBDA(void, (int *p), { *p = rand_int(0, 100); }));
+#if defined(LAMBDA)
+    LAMBDA(void, (int *p), { *p = rand_int(0, 100); })
+#else
+    lambda_random
+#endif
+        );
 }
 
 void arr_fill(int *arr, size_t len, int num) {
+#if defined(LAMBDA)
     arr_foreach_int(arr, len,
-            LAMBDA(void, (int *p), { *p = num; }));
+        LAMBDA(void, (int *p), { *p = num; })
+        );
+#else
+    // this needs 2 input, but the 2nd is not visible from outside
+    if (!arr || !fn || len == 0)
+        return;
+    for (size_t i = 0; i < len; i++)
+        arr[i] = num;
+#endif
 }
 
 // not even public, just ... for fun
@@ -116,7 +138,12 @@ void arr_foreach_int(int *arr, size_t len, void (*fn)(int*)) {
 
 void arr_print(const int *arr, size_t len) {
     arr_foreach_int((int*)arr, len,
-            LAMBDA(void, (int *p), { printf("idx:%zu : %d\n", (size_t)(p-arr), *p); }));
+#if defined(LAMBDA)
+    LAMBDA(void, (int *p), { printf("idx:%zu : %d\n", (size_t)(p-arr), *p); })
+#else
+    lambda_print
+#endif
+        );
 }
 
 void arr_mul(const int *arr, const int *arr2, size_t len, int *mult) {
@@ -129,10 +156,20 @@ void arr_mul(const int *arr, const int *arr2, size_t len, int *mult) {
 
 void arr_free(void **arr, size_t len) {
     arr_foreach(arr, len,
-            LAMBDA(void, (void *p), { free(p); }));
+#if defined(LAMBDA)
+    LAMBDA(void, (void *p), { free(p); })
+#else
+    free
+#endif
+        );
 }
 void arr_free_fn(void **arr, size_t len, void (*free_fn)(void*)) {
     arr_foreach(arr, len,
-            LAMBDA(void, (void *p), { free_fn(p); }));
+#if defined(LAMBDA)
+    LAMBDA(void, (void *p), { free_fn(p); })
+#else
+    free_fn
+#endif
+        );
 }
 

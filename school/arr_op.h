@@ -5,6 +5,11 @@
 #include <stdlib.h> // NULL
 #include <stddef.h> // size_t
 
+#if !defined(ARR_L) && !defined(ARR_S)
+#  define ARR_L(x) x, ARR_S(x)
+#  define ARR_S(x) sizeof(x)/sizeof(x[0])
+#endif /* ARR_L and ARR_S */
+
 #if defined(__GNUC__) || defined(__clang__)
 #  define LAMBDA(ret, args, body) __extension__ ({ ret lambda_fn_ args body lambda_fn_; })
 #endif
