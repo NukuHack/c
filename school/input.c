@@ -348,7 +348,7 @@ read:
         goto read;
     }
 
-    if (filter && filter(ch)) {
+    if (filter && !filter(ch)) {
         print("wrong char [not allowed]");
         goto read;
     }
@@ -377,7 +377,7 @@ String* sv_create(void) {
     return v;
 }
 
-String* sv_create_frm(char *buf, int len) {
+String* sv_create_frm(char *buf, size_t len) {
     String* v = (String*)malloc(sizeof *v);
     if (!v) {
         err("malloc failed");
@@ -461,7 +461,7 @@ void input_string(FILE *in, FILE *out, char **buf, size_t len, bool dynamic, con
     } else { // EOF case
         handle_eof(in, out);
         print("try again");
-        sv_free(v);
+        *buf = sv_free_get(v);
         goto read;
     }
   nice:;;
@@ -469,7 +469,7 @@ void input_string(FILE *in, FILE *out, char **buf, size_t len, bool dynamic, con
     *buf = sv_free_get(v);
     return;
   free:;;
-    sv_free(v);
+    *buf = sv_free_get(v);
     return;
 
 #else /* basic wrapper of fgets */
@@ -654,7 +654,7 @@ char *inp_str_s(const char *text) {
     input_string(stdin, stdout, &buf, BUF_LEN, true, text);
     return buf;
 }
-char *read_str(const char *msg, char *buf, int bufs) {
+char *read_str(const char *msg, char *buf, size_t bufs) {
     input_string(stdin, stdout, &buf, bufs, false, msg);
     return buf;
 }
@@ -684,6 +684,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
         errno = EINVAL;
         return -1;
     }
+    if (!*bufptr) *n = 0;
 
     size_t len = 0;
     int c;

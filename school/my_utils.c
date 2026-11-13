@@ -1,4 +1,5 @@
 #define MY_MEMCHECK_IMPL
+#define _POSIX_C_SOURCE 200809L
 #include "my_utils.h" // self
 #include <stdlib.h> // NULL
 #include <time.h> // time, random seeding
@@ -13,6 +14,7 @@
 #  include <windows.h>
 #  include <conio.h>
 #else
+#  include <errno.h>
 #  include <unistd.h>
 #  include <termios.h>
 #  include <sys/ioctl.h>
@@ -98,11 +100,14 @@ void clear(void) {
 }
 
 void slep(double millis) {
-    #if defined(WIN)
-        Sleep(millis);
-    #else
-        sleep(millis / 1000);
-    #endif
+#if defined(WIN)
+    Sleep((DWORD)millis);
+#else
+    struct timespec ts;
+    ts.tv_sec  = (time_t)(millis / 1000.0);
+    ts.tv_nsec = (long)((millis - ts.tv_sec * 1000.0) * 1e6);
+    while (nanosleep(&ts, &ts) == -1 && errno == EINTR);
+#endif
 }
 
 char **shift_args(int *argc, char ***argv) {
@@ -128,6 +133,7 @@ char *alphabetic(char *a, char *b) {
 // taken from `https://en.cppreference.com/c/string/byte/strpbrk`
 int count_words(const char *str, const char *sep) {
     int cnt = 0;
+    if (!str || !*str) return 0;
     do {
         str = strpbrk(str, sep); // find separator
           // if we use string-span instead of skip one char
@@ -140,7 +146,7 @@ int count_words(const char *str, const char *sep) {
 }
 
 void strrep(char *str, int len, char old, char upd) {
-    for (; len > 0; len--) {
+    for (--len; len > 0; len--) {
         if (str[len] == old) {
             str[len] = upd;
         }
@@ -182,7 +188,7 @@ char *temp_dir(void) {
     if(!arr) arr = getenv("TEMP");
 #endif
     if (!arr) arr = "/tmp";
-    int l = strlen(arr); // here we assume it is a real dir and not just a '/'
+    size_t l = strlen(arr); // here we assume it is a real dir and not just a '/'
     tmp = (char*)malloc(sizeof(char) * l + 1);
     if (!tmp) {
         err("malloc fail");

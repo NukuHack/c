@@ -35,7 +35,8 @@ size_t check_ptr_arr_emp(void) {
         }
     }
     LOG_ERROR("no free memory !!! atleast %d pointers used (entire storage is full)\n", PTR_ARR_SIZ);
-    return PTR_ARR_SIZ;
+    abort();
+    return 0;
 }
 bool in_c_ptr_arr(void *ptr) {
     for (size_t i = current_pointer; i-- > 0;) {
@@ -55,9 +56,12 @@ bool rm_c_ptr_arr(void *ptr) {
     return false;
 }
 void ad_c_ptr_arr(void *ptr) {
-    if (current_pointer > PTR_ARR_SIZ / 2)
-        malloced_pointers[check_ptr_arr_emp()] = ptr;
-    else
+    if (current_pointer > PTR_ARR_SIZ / 2) {
+        size_t space = check_ptr_arr_emp();
+        if (space > current_pointer)
+            current_pointer = space;
+        malloced_pointers[space] = ptr;
+    } else
         malloced_pointers[current_pointer++] = ptr;
 }
 
@@ -73,7 +77,7 @@ void free_custom(void *ptr) {
         }
         LOG_DEBUG("free: done, %p removed from storage", ptr);
         free(ptr);
-    }       
+    }
 }
 void *malloc_custom(size_t s) {
     void *ptr = (void*)malloc(s);
@@ -113,6 +117,8 @@ void *realloc_custom(void *ptr, size_t s) {
     void *pptr = (void*)realloc(ptr, s);
     if (!pptr) {
         LOG_ERROR("realloc: could not realloc %p to %lu bytes \n", ptr, s);
+        ad_c_ptr_arr(ptr);
+        LOG_DEBUG("realloc: re-saved (original) %p to storage\n", ptr);
         return NULL;
     } else {
         LOG_DEBUG("realloc: saved %p to storage\n", ptr, pptr);

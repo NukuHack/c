@@ -16,7 +16,7 @@
 #endif /* UINT_TYPE */
 
 // used for char, allows stuff that returns true
-typedef bool(predicate)(int);
+typedef int (predicate)(int);
 
 /* input result */
 typedef enum {
@@ -68,7 +68,7 @@ double inp_double_s(const char* text, double min, double max);
 char inp_char_s(const char* text, predicate *filter);
 char* inp_str_s(const char* text);
 /* read to buff, like fgets, return buffptr if success, "NULL" otherwise */
-char *read_str(const char *msg, char* buf, int bufs);
+char *read_str(const char *msg, char* buf, size_t bufs);
 
 /* Backards cmpatiblity ... MY dearest */
 

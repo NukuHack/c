@@ -4,6 +4,7 @@
 
 #include <stdlib.h> // null
 #include <stdbool.h> // bool 
+#include <stddef.h> // size_t
 
 #if defined(MY_MEMCHECK) && 0
 #include "memcheck.h" // can't recursively import it
@@ -66,7 +67,8 @@ void log_line(log_lvl lvl, const char *msg);
 
 // sets the global level - checked at runtime
 // might remove it in favor of preprocessor
-void log_set_global(log_lvl _lvl, bool _show_color, bool _show_color_file, bool _show_time, bool _use_file, bool _use_stderr);
+void log_set_global(log_lvl _lvl, bool _show_color, bool _show_color_file,
+        bool _show_time, bool _use_file, bool _use_stderr);
 void log_setlvl(log_lvl _lvl);
 
 // clears the log file (if exists)

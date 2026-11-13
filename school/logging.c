@@ -34,10 +34,11 @@ bool show_time = true;
 bool use_file = true;
 bool use_stderr = true;
 
-void log_set_global(log_lvl _lvl, bool _show_color, bool _show_color_file, bool _show_time, bool _use_file, bool _use_stderr) {
+void log_set_global(log_lvl _lvl, bool _show_color, bool _show_color_file,
+        bool _show_time, bool _use_file, bool _use_stderr) {
     log_level_global = _lvl;
-    show_color_file = _show_color;
-    show_color = _show_color_file;
+    show_color_file = _show_color_file;
+    show_color = _show_color;
     show_time = _show_time;
     use_file = _use_file;
     use_stderr = _use_stderr;
@@ -52,7 +53,7 @@ int log_main(void) {
 #if !defined(LOG_FILE)
     char *file = "/latest.log",
          *tmp = temp_dir();
-    int tmp_l = strlen(tmp),
+    size_t tmp_l = strlen(tmp),
         file_l = strlen(file);
     log_file = (char*)malloc(sizeof(char) * (tmp_l + file_l + 1));
     if (!log_file) {
@@ -95,7 +96,7 @@ const char *loglvl_col(log_lvl lvl) {
     switch (lvl) {
         case TRACE: return "\033[32m";
         case DEBUG: return "\033[34m";
-        case INFO: return "\033[27m";
+        case INFO: return "\033[37m";
         case WARN: return "\033[33m";
         case ERROR: return "\033[31m";
     }
@@ -149,7 +150,7 @@ void log_line(log_lvl lvl, const char *msg) {
         if (fflush(out) != 0)
             perror("log flush");
     }
-    if (use_file) {
+    if (use_file && log_file) {
         FILE *out = fopen(log_file, "a"); // append, creat if non exist
         if (!out) {
             perror("log file");
