@@ -22,7 +22,7 @@ void *malloced_pointers[PTR_ARR_SIZ] = {0};
 size_t current_pointer;
 
 void check_ptr_arr(void) {
-    for (size_t i = current_pointer; i>0; i--) {
+    for (size_t i = current_pointer; i-- > 0;) {
         if (malloced_pointers[i]) {
             LOG_ERROR("check: not freed memory : %p\n", malloced_pointers[i]);
         }
@@ -38,7 +38,7 @@ size_t check_ptr_arr_emp(void) {
     return PTR_ARR_SIZ;
 }
 bool in_c_ptr_arr(void *ptr) {
-    for (size_t i = current_pointer; i>0;i--) {
+    for (size_t i = current_pointer; i-- > 0;) {
         if (malloced_pointers[i] == ptr) {
             return true;
         }
@@ -46,7 +46,7 @@ bool in_c_ptr_arr(void *ptr) {
     return false;
 }
 bool rm_c_ptr_arr(void *ptr) {
-    for (size_t i = current_pointer; i>0;i--) {
+    for (size_t i = current_pointer; i-- > 0;) {
         if (malloced_pointers[i] == ptr) {
             malloced_pointers[i] = NULL;
             return true;
