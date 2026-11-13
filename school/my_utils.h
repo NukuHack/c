@@ -25,7 +25,8 @@
 
 #if !defined(UINT_TYPE) && !defined(uint)
 #  define UINT_TYPE
-#  define uint unsigned int
+   typedef unsigned int uint;
+#  define uint uint
 #endif /* UINT_TYPE */
 
 /* swap the data of 2 pointers */

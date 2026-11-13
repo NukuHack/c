@@ -5,7 +5,6 @@
 #include "my_utils.h" // basic io
 #include <ctype.h> // basic char methods
 #include <stdlib.h> // basic memory & NULL
-#include <stddef.h> // size_t, ptrdiff_t aka ssize_t
 #include <string.h> // batch mem op
 
 #if defined(DYN_STR) /* DYN_STR */
@@ -482,15 +481,15 @@ char inp_char_s(const char* text, predicate *filter) {
  *
  * The caller owns `*lineptr` and must free() it (possible "NULL"/0).
  */
-ptrdiff_t fgetline(char **lineptr, size_t *n, FILE *stream) {
-    return fgetbatch(lineptr, n, stream, true);
+ptrdiff_t fgetline(char **lineptr, size_t *n, FILE *in) {
+    return fgetbatch(lineptr, n, in, true);
 }
-ptrdiff_t fgetfile(char **bufptr, size_t *n, FILE *stream) {
-    return fgetbatch(bufptr, n, stream, false);
+ptrdiff_t fgetfile(char **bufptr, size_t *n, FILE *in) {
+    return fgetbatch(bufptr, n, in, false);
 }
 
-ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *stream, bool stpN) {
-    if (!bufptr || !n || !stream) {
+ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
+    if (!bufptr || !n || !in) {
         errno = EINVAL;
         return -1;
     }
@@ -498,20 +497,20 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *stream, bool stpN) {
     size_t len = 0;
     int c;
 
-    while ((c = fgetc(stream)) != EOF) {
+    while ((c = fgetc(in)) != EOF) {
         /* need room for this char + the NUL terminator */
         if (len + 1 >= *n) {
             if (*n == 0) { /* if size is 0 */
                 *n = BUF_LEN >> 1;
             } else if (*n > (size_t)-1 / 2) { /* overflow guard */
-                ungetc(c, stream); /* restore consumed char */
+                ungetc(c, in); /* restore consumed char */
                 errno = ENOMEM;
                 return -1;
             }
             size_t new_size = *n * 2;
             char *p = (char*)realloc(*bufptr, new_size); /* realloc is fine on "NULL" */
             if (p == NULL) {
-                ungetc(c, stream); /* restore consumed char */
+                ungetc(c, in); /* restore consumed char */
                 errno = ENOMEM;
                 return -1; /* ENOMEM, *lineptr intact */
             }
@@ -531,32 +530,31 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *stream, bool stpN) {
     return (ptrdiff_t)len;
 }
 
-
-
-
+char *input_string(FILE *in, FILE *out, char **buf, int *len, const char *prompt) {
+    if (prompt && out) {
+        fputs(prompt, out);
+        fflush(out);
+    }
+    if (!in || !len || !buf) {
+        return NULL;
+    }
 #if defined(DYN_STR) /* DYN_STR */
-char *inp_str_s(const char *text) {
     String *v;
     int got_any, c;
-read:
-    if (text) {
-        fputs(text, stdout);
-        fflush(stdout);
-    }
-
+read:;;
     v = sv_create();
     if (!v) goto free;
 
     got_any = 0;
 
-    while ((c = fgetc(stdin)) != EOF) {
+    while ((c = fgetc(in)) != EOF) {
         got_any = 1;
 
         if (c == '\n') {
             if (!sv_push(v, '\0')) goto free;
             return sv_free_get(v);
         } else if (c == '\r') {
-            consume_crlf_tail(stdin);
+            consume_crlf_tail(in);
             if (!sv_push(v, '\0')) goto free;
             return sv_free_get(v);
         }
@@ -565,7 +563,7 @@ read:
     }
 
     if (!got_any) { // EOF case
-        handle_eof(IO);
+        handle_eof(in, out);
         print("try again");
         sv_free(v);
         goto read;
@@ -576,28 +574,21 @@ read:
 free:
     sv_free(v);
     return NULL;
-}
 #elif defined(FGETS_STR)
-char *inp_str_s(const char *text) {
     char tmp[BUF_LEN], *str;
     int red;
     bool hadN;
-read:
-    if (text) {
-        fputs(text, stdout);
-        fflush(stdout);
-    }
-
-    if (fgets(tmp, BUF_LEN, stdin) == NULL) {
-        if (feof(stdin))
-            handle_eof(IO);
-        print("try again");
+read:;;
+    if (fgets(ARR_L(tmp), in) == NULL) {
+        if (feof(in))
+            handle_eof(in, out);
+        fprintf(out, "try again");
         goto read;
     }
     // here tmp is nicely set
     red = strlen(tmp);
     hadN = false;
-    while (red > 0 && tmp[red-1] == '\n') {
+    while (red > 0 && (tmp[red-1] == '\r' || tmp[red-1] == '\n')) {
         // Fgets reads the new line as char, and puts it in the buffer
         // here I don't want that, so manual removal
         // TODO: we should also handle windows \r\n
@@ -607,36 +598,30 @@ read:
    
     // Check if we read without a newline
     if (red > 0 && !hadN) {
-        if (feof(stdin)) // EOF
-            handle_eof(IO);
+        if (feof(in)) // EOF
+            handle_eof(in out);
         else // not EOF -> there is more on the input
-            drain_line(stdin);
+            drain_line(in);
     }
 
     str = (char*)malloc(sizeof(char) * (red + 1));
     if (!str) {
-        err("malloc failed");
+        fprintf(stderr, "malloc failed");
         return NULL;
     }
     memcpy(str, tmp, red);
     str[red] = '\0';
     return str;
-}
 #else /* non DYN and non FGETS */
 // old clunky, but finally works with EOF
-char* inp_str_s(const char* text) {
     char tmp[BUF_LEN], *str;
     int red, c;
-read:
-    if (text) {
-        fputs(text, stdout);
-        fflush(stdout);
-    }
+read:;;
     c = getchar();
 
     if (c == EOF) {
-        handle_eof(IO);
-        print("try again");
+        handle_eof(in, out);
+        fprintf(out, "try again");
         goto read;
     } else if (c == '\n')
         goto memalloc; // we do allow empty
@@ -647,32 +632,46 @@ read:
     while ((c = getchar()) != '\n' && red < BUF_LEN) {
         /* EOF after a partial line: accept what we got */
         if (c == EOF) {
-            handle_eof(IO);
+            handle_eof(in, out);
             break;
         }
         tmp[red++] = (char)c;
     }
     if (red == BUF_LEN)
-        drain_line(stdin);
+        drain_line(in);
 memalloc:
     str = (char*)malloc(sizeof(char) * (red + 1));
     if (!str) {
-        err("malloc failed");
+        fprintf(stderr, "malloc failed");
         return NULL;
     }
     memcpy(str, tmp, red);
     str[red] = '\0';
     return str;
-}
 #endif /* DYN_STR */
+}
+
+char *inp_str_s(const char *text) {
+    char *buf;
+    int len;
+    (void*)input_string(stdin, stdout, &buf, &len, text);
+    return buf;
+}
 
 
 char *read_str(const char *msg, char* buf, int bufs) {
-    print(msg);
-    if (!fgets(buf, bufs, stdin)) {
-        err("Could not read");
-        return NULL;
+    if (msg) {
+        fputs(msg, stdout);
+        fflush(stdout);
     }
+    if (!fgets(buf, bufs, stdin))
+        return NULL;
+    int l = strlen(buf);
+    if (l == 0)
+        return NULL;
+    while (l > 0 && (buf[l -1] == '\r' || buf[l -1] == '\n'))
+        buf[--l] = '\0'; // remove new line
+   
     return buf;
 }
 

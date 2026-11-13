@@ -4,15 +4,7 @@
 #include <ctype.h> // char conversion
 #include <stdbool.h> // bool
 #include "my_utils.h" // better io (renamed from small_lib.h)
-
-char *read_str(const char *msg, char* buf, int bufs) {
-    print(msg);
-    if (!fgets(buf, bufs, stdin)) {
-        err("Could not read");
-        return NULL;
-    }
-    return buf;
-}
+#include "input.h" // input
 
 int main(int _argc, char **_argv) {
     int argc = _argc;

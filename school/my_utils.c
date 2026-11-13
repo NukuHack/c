@@ -17,6 +17,17 @@
 #  include <sys/ioctl.h>
 #endif
 
+#if !defined(main_fn)
+#  define main_fn
+int main(int argc, char **argv) {
+    do {
+        char **arg = shift_args(&argc, &argv);
+        print(*arg);
+    } while (argc > 0);
+    return 0;
+}
+#endif /* main_fn */
+
 static bool seeded = false;
 int rand_int(int min, int max) {
     if (!seeded) {
@@ -97,7 +108,7 @@ void slep(double millis) {
 
 // does not work yet ... sry
 char **shift_args(int *argc, char ***argv) {
-    if (!argc || !argv || *argc <= 1)
+    if (!argc || !argv || *argc <= 0)
         return NULL;
     char **arg = *argv;
 

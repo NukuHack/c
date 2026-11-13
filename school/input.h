@@ -3,10 +3,12 @@
 
 #include <stdio.h> // io
 #include <stdbool.h> // bool
+#include <stddef.h> // size_t, ptrdiff_t aka ssize_t
 
 #if !defined(UINT_TYPE) && !defined(uint)
 #  define UINT_TYPE
-#  define uint unsigned int
+   typedef unsigned int uint;
+#  define uint uint
 #endif /* UINT_TYPE */
 
 // used for char, allows stuff that returns true
@@ -37,9 +39,11 @@ inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, con
 void input_char(FILE *in, FILE *out, char *v, predicate *filter, const char *prompt);
 
 /* basic file op */
-ptrdiff_t fgetline(char **lineptr, size_t *n, FILE *stream);
-ptrdiff_t fgetfile(char **bufptr, size_t *n, FILE *stream);
-ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *stream, bool stpN); // to skip Newlines or not
+ptrdiff_t fgetline(char **lineptr, size_t *n, FILE *in);
+ptrdiff_t fgetfile(char **bufptr, size_t *n, FILE *in);
+ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN); // to skip Newlines or not
+/* read to buff, like fgets, return buffptr if success, "NULL" otherwise */
+char *read_str(const char *msg, char* buf, int bufs);
 
 /* Consume exactly `expected`; otherwise leave the char in the stream. */
 inp_res input_sep(FILE *in, int expected);
