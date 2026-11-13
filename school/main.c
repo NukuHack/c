@@ -6,6 +6,10 @@
 #include "my_utils.h" // better io (renamed from small_lib.h)
 #include "input.h" // input
 
+#if defined(MY_MEMCHECK)
+#include "memcheck.h"
+#endif
+
 int main(int _argc, char **_argv) {
     int argc = _argc;
     char **argv = _argv;
@@ -22,7 +26,7 @@ int main(int _argc, char **_argv) {
                           return 1;
 
                       int wc = count_words(buf, " "); // uses string.h underneath
-                      int cc = strlen(buf) -1;
+                      int cc = strlen(buf);
                       printf("word count: %i, char count: %i \n", wc, cc);
                   } break;
         case (2) : {
@@ -70,9 +74,6 @@ int main(int _argc, char **_argv) {
                       char file_name[1024];
                       if(!read_str("input the filename: ", ARR_L(file_name)))
                           return 1;
-                      int file_l = strlen(file_name);
-                      if (file_name[file_l - 1] == '\n')
-                          file_name[file_l - 1] = '\0'; // to make it real
                       FILE *file = fopen(file_name, "r");
                       if (!file) {
                           fprintf(stderr, "could not open file %s\n", file_name);
@@ -101,9 +102,6 @@ int main(int _argc, char **_argv) {
                       char file_name[1024];
                       if(!read_str("input the filename: ", ARR_L(file_name)))
                           return 1;
-                      int file_l = strlen(file_name);
-                      if (file_name[file_l - 1] == '\n')
-                          file_name[file_l - 1] = '\0'; // to make it real
                       FILE *file = fopen(file_name, "r");
                       if (!file) {
                           err("could not open file");
@@ -129,9 +127,6 @@ int main(int _argc, char **_argv) {
                       // printf("file data uppercase : \n%s\n", buf);
                       if(!read_str("input destination file: ", ARR_L(file_name)))
                           return 1;
-                      file_l = strlen(file_name);
-                      if (file_name[file_l - 1] == '\n')
-                          file_name[file_l - 1] = '\0'; // to make it real
                       if (check_file_exist(file_name)) {
                           err("file already exists");
                           return 1;

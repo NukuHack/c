@@ -1,3 +1,4 @@
+#define MY_MEMCHECK_IMPL
 #include "my_utils.h" // self
 #include <stdlib.h> // NULL
 #include <time.h> // time, random seeding
@@ -17,16 +18,14 @@
 #  include <sys/ioctl.h>
 #endif
 
-#if !defined(main_fn)
-#  define main_fn
-int main(int argc, char **argv) {
+
+int my_main(int argc, char **argv) {
     do {
         char **arg = shift_args(&argc, &argv);
         print(*arg);
     } while (argc > 0);
     return 0;
 }
-#endif /* main_fn */
 
 static bool seeded = false;
 int rand_int(int min, int max) {
@@ -106,7 +105,6 @@ void slep(double millis) {
     #endif
 }
 
-// does not work yet ... sry
 char **shift_args(int *argc, char ***argv) {
     if (!argc || !argv || *argc <= 0)
         return NULL;
@@ -149,7 +147,7 @@ void strrep(char *str, int len, char old, char upd) {
     }
 }
 
-#ifdef __NOT_DEFINED
+#if ZERO
 // copied from `https://en.cppreference.com/c/string/byte/strtok`
 // decided not to use this, since it has "complex" internal state (atleast a ptr)
 // what is unreliable in concurrent or any "future" context
@@ -197,6 +195,44 @@ char *temp_dir(void) {
 /**
  * FILE stuff :
  * */
+
+#if ZERO
+size_t fwrite( const void* buffer, size_t size, size_t count, FILE* stream );
+#endif
+
+// Writes count of objects from the given array buffer to the output stream stream. The objects are written as if by reinterpreting each object as an array of unsigned char and calling fputc size times for each object to write those unsigned chars into stream, in order. The file position indicator for the stream is advanced by the number of characters written.
+//
+// If an error occurs, the resulting value of the file position indicator for the stream is indeterminate.
+// Parameters
+// buffer   -   pointer to the first object in the array to be written
+// size     -   size of each object
+// count    -   the number of the objects to be written
+// stream   -   pointer to the output stream
+// Return value
+//
+// The number of objects written successfully, which will be less than count only if an error occurs.
+//
+// If size or count is zero, fwrite returns zero and performs no other action. 
+
+#if ZERO
+size_t fread( void* buffer, size_t size, size_t count, FILE* stream );
+#endif
+
+// Reads up to count objects into the array buffer from the given input stream stream as if by calling fgetc size times for each object, and storing the results, in the order obtained, into the successive positions of buffer, which is reinterpreted as an array of unsigned char. The file position indicator for the stream is advanced by the number of characters read.
+//
+// If an error occurs, the resulting value of the file position indicator for the stream is indeterminate. If a partial element is read, its value is indeterminate.
+// Parameters
+// buffer   -   pointer to the array where the read objects are stored
+// size     -   size of each object in bytes
+// count    -   the number of the objects to be read
+// stream   -   the stream to read
+// Return value
+//
+// Number of objects read successfully, which may be less than count if an error or end-of-file condition occurs.
+//
+// If size or count is zero, fread returns zero and performs no other action.
+//
+// fread does not distinguish between end-of-file and error, and callers must use feof and ferror to determine which occurred. 
 
 bool check_file_exist(const char *name) {
     FILE *file = fopen(name, "r"); // read does not create

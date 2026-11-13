@@ -1,15 +1,11 @@
 #include "input.h" // self
+#include "my_utils.h" // basic io
 #include <limits.h> // limit for overflow checking
 #include <math.h> // double stuff for overflow & NAN
 #include <errno.h> // error checking mainly "EOF" and "errno" at builtin stuff
-#include "my_utils.h" // basic io
 #include <ctype.h> // basic char methods
 #include <stdlib.h> // basic memory & NULL
 #include <string.h> // batch mem op
-
-#if defined(DYN_STR) /* DYN_STR */
-#  include "string.h" // dyn-mem & struct
-#endif /* DYN_STR */
 
 #ifndef BUF_LEN
 #  define BUF_LEN 100
@@ -318,6 +314,10 @@ inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, con
     return stopped ? INPUT_STOPPED : INPUT_OK;
 }
 
+
+
+// make it not prtint error, and move re-try outside
+// TODO : make it return "inp_res"
 void input_char(FILE *in, FILE *out, char *v, predicate *filter, const char *prompt) {
     int c, ch;
 read:
@@ -343,7 +343,7 @@ read:
     }
 
     if (c != '\n' && c != EOF) { // EOF case
-        drain_line(in);
+        drain_line(in, out);
         print("input a char (char)");
         goto read;
     }
@@ -354,6 +354,163 @@ read:
     }
 
     *v = (char)ch;
+}
+
+
+#if defined(DYN_STR) /* Dynamic-resize string */
+
+typedef struct String_t {
+    char *data;
+    size_t len;
+    size_t sz;
+} String;
+
+String* sv_create(void) {
+    String* v = (String*)malloc(sizeof *v);
+    if (!v) {
+        err("malloc failed");
+        return NULL;
+    }
+    v->data = NULL;
+    v->len = 0;
+    v->sz = 0;
+    return v;
+}
+
+String* sv_create_frm(char *buf, int len) {
+    String* v = (String*)malloc(sizeof *v);
+    if (!v) {
+        err("malloc failed");
+        return NULL;
+    }
+    v->data = buf;
+    v->len = 0;
+    v->sz = len;
+    return v;
+}
+
+void sv_free(String* v) {
+    if (!v) return;
+    if (v->data)
+        free(v->data);
+    free(v);
+}
+char* sv_free_get(String* v) {
+    if (!v) return NULL;
+    char* d = v->data;
+    free(v);
+    return d;
+}
+
+bool sv_reserve(String *v, size_t need) {
+    if (!v) return false;
+    if (need <= v->sz) return true;
+
+    size_t ncap = v->sz ? v->sz * 2 : BUF_LEN;
+    while (ncap < need) ncap <<= 1;
+
+    char *p = (char*)realloc(v->data, ncap);
+    if (!p) return false;
+
+    v->data = p;
+    v->sz = ncap;
+    return true;
+}
+
+bool sv_push(String *v, char c) {
+    if (!v || !sv_reserve(v, v->len + 1)) return false;
+    v->data[v->len++] = c;
+    return true;
+}
+
+#endif
+
+// one general string read-in
+// it should handle stacl & heap stuff nicely 
+// if something's len >= req -> should not alloc memory
+// but if it's "too small" or 0 then it should malloc/realloc
+// TODO : separate to 2 fn
+void input_string(FILE *in, FILE *out, char **buf, size_t len, bool dynamic, const char *prompt) {
+    if (prompt && out) {
+        fputs(prompt, out);
+        fflush(out);
+    }
+    if (!in || !len || !buf)
+        return;
+
+#if defined(DYN_STR) /* Dynamic-resize string */
+    if (!dynamic)
+        return;
+    String *v;
+    int c;
+  read:;;
+    v = sv_create_frm(*buf, len);
+    if (!v) goto free;
+
+    if ((c = fgetc(in)) != EOF) {
+        do {
+            if (c == '\n')
+                goto nice;
+            else if (c == '\r') {
+                consume_crlf_tail(in);
+                goto nice;
+            }
+
+            if (!sv_push(v, (char)c)) goto free;
+        } while ((c = fgetc(in)) != EOF);
+    } else { // EOF case
+        handle_eof(in, out);
+        print("try again");
+        sv_free(v);
+        goto read;
+    }
+  nice:;;
+    if (!sv_push(v, '\0')) goto free;
+    *buf = sv_free_get(v);
+    return;
+  free:;;
+    sv_free(v);
+    return;
+
+#else /* basic wrapper of fgets */
+    char *b = *buf; // still ptr, so points to same val
+    if (!b)
+        return;
+  read:;;
+    if (!fgets(b, len, in)) {
+        if (feof(in))
+            handle_eof(in, out);
+        fprintf(out, "try again");
+        goto read; // retry only if we red nothing
+    }
+    size_t l = strlen(b);
+    bool hadN = false;
+    while (l > 0 && (b[l-1] == '\r' || b[l-1] == '\n')) {
+        b[--l] = '\0';
+        hadN = true;
+    }
+   
+    // Check if we didn't get newline
+    if (!hadN) {
+        if (feof(in)) // EOF
+            handle_eof(in, out);
+        else // not EOF -> there is more on the input
+            drain_line(in, out);
+    }
+
+    // optional - but only at heap buffers
+  #if ZERO
+    char *ptr;
+    ptr = (char*)relloc(b, sizeof(char) * (l + 1));
+    if (!ptr) {
+        fprintf(stderr, "malloc failed");
+        return;
+    }
+    *buf = ptr;
+  #endif
+    return;
+#endif /* String getter types */
+
 }
 
 /*  separator  */
@@ -368,7 +525,7 @@ inp_res input_sep(FILE *in, int expected) {
 
 /*  utility  */
 
-void drain_line(FILE *in) {
+void drain_line(FILE *in, FILE *out) {
     int c;
     while ((c = fgetc(in)) != '\n' && c != '\r' && c != EOF);
 
@@ -379,7 +536,7 @@ void drain_line(FILE *in) {
        cursor is still sitting at the end of the current line, so
        emit one ourselves to keep prompts/errors on their own line */
     if (c == EOF) {
-        handle_eof(in, stdout);
+        handle_eof(in, out);
     }
 }
 
@@ -390,9 +547,7 @@ int inp_int(void) {
     return inp_int_s("input an int: ", -10000, 10000);
 }
 uint inp_uint(void) {
-    // TODO : make a real impl.
-    // reject negative numbers
-    return (uint)inp_int_s("input a uint: ", 0, 10000);
+    return inp_uint_s("input an unsigned: ", 0, 10000);
 }
 double inp_double(void) {
     return inp_double_s("input a double: ", -10000, 10000);
@@ -412,10 +567,10 @@ int inp_int_s(const char* text, int min, int max) {
     int val;
     inp_res r;
 read:
-    r = input_int(stdin, stdout, &val, min, max, text);
+    r = input_int(IO, &val, min, max, text);
 
     if (input_drain_required(r))
-        drain_line(stdin);
+        drain_line(IO);
 
     switch (r) {
         case INPUT_OK:
@@ -433,16 +588,43 @@ read:
     }
 }
 
+uint inp_uint_s(const char* text, uint min, uint max) {
+    if (min > max) { uint t = min; min = max; max = t; }
+
+    uint val;
+    inp_res r;
+read:
+    r = input_uint(IO, &val, min, max, text);
+
+    if (input_drain_required(r))
+        drain_line(IO);
+
+    switch (r) {
+        case INPUT_OK:
+            return val;
+        case INPUT_EOF:
+            handle_eof(IO);
+            print("closed input, but retry");
+            goto read;
+        case INPUT_RANGE:
+            printf("input a number in [%u,%u]\n", min, max);
+            goto read;
+        default:
+            print(input_status_str(r));
+            goto read;
+    }
+}
+
 double inp_double_s(const char* text, double min, double max) {
     if (min > max) { double t = min; min = max; max = t; }
 
     double val;
     inp_res r;
 read:
-    r = input_double(stdin, stdout, &val, min, max, text);
+    r = input_double(IO, &val, min, max, text);
 
     if (input_drain_required(r))
-        drain_line(stdin);
+        drain_line(IO);
 
     switch (r) {
         case INPUT_OK:
@@ -460,34 +642,43 @@ read:
     }
 }
 
-
 char inp_char_s(const char* text, predicate *filter) {
     char c;
     input_char(stdin, stdout, &c, filter, text);
     return c;
 }
-
-
+char *inp_str_s(const char *text) {
+    char *buf = (char*)malloc(BUF_LEN);
+    if (!buf) // fail
+        return NULL;
+    input_string(stdin, stdout, &buf, BUF_LEN, true, text);
+    return buf;
+}
+char *read_str(const char *msg, char *buf, int bufs) {
+    input_string(stdin, stdout, &buf, bufs, false, msg);
+    return buf;
+}
 
 
 /*
- * Reads one line from `stream` (any length), including the trailing '\n' if present.
- * The buffer pointed to by `*lineptr` is allocated/reallocated as needed and is
- * always NUL-terminated on success.
+ * Reads one line from `FILE *in` (any length), including the trailing '\r' and '\n' if present.
+ * The buffer pointed to by `*bufptr` is allocated/reallocated as needed and is
+ * always "\0"-terminated on success.
  *
- * On success : returns number of bytes read (excluding the NUL terminator).
+ * On success : returns number of bytes read (excluding the "\0").
  * On EOF     : returns -1 with no data consumed; errno unchanged.
  * On error   : returns -1 and sets errno (EINVAL / ENOMEM / whatever fgetc set).
  *
- * The caller owns `*lineptr` and must free() it (possible "NULL"/0).
+ * The caller owns `*bufptr` and must free() it (possible "NULL").
+ * *bufptr must be "NULL", or a pointer from malloc/realloc (with *n its size).
+ * If it is stack allocated resize is "Undefined" best case is crash.
  */
-ptrdiff_t fgetline(char **lineptr, size_t *n, FILE *in) {
-    return fgetbatch(lineptr, n, in, true);
+ptrdiff_t fgetline(char **bufptr, size_t *n, FILE *in) {
+    return fgetbatch(bufptr, n, in, true);
 }
 ptrdiff_t fgetfile(char **bufptr, size_t *n, FILE *in) {
     return fgetbatch(bufptr, n, in, false);
 }
-
 ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     if (!bufptr || !n || !in) {
         errno = EINVAL;
@@ -501,7 +692,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
         /* need room for this char + the NUL terminator */
         if (len + 1 >= *n) {
             if (*n == 0) { /* if size is 0 */
-                *n = BUF_LEN >> 1;
+                *n = BUF_LEN >> 1; // half size
             } else if (*n > (size_t)-1 / 2) { /* overflow guard */
                 ungetc(c, in); /* restore consumed char */
                 errno = ENOMEM;
@@ -530,150 +721,6 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     return (ptrdiff_t)len;
 }
 
-char *input_string(FILE *in, FILE *out, char **buf, int *len, const char *prompt) {
-    if (prompt && out) {
-        fputs(prompt, out);
-        fflush(out);
-    }
-    if (!in || !len || !buf) {
-        return NULL;
-    }
-#if defined(DYN_STR) /* DYN_STR */
-    String *v;
-    int got_any, c;
-read:;;
-    v = sv_create();
-    if (!v) goto free;
-
-    got_any = 0;
-
-    while ((c = fgetc(in)) != EOF) {
-        got_any = 1;
-
-        if (c == '\n') {
-            if (!sv_push(v, '\0')) goto free;
-            return sv_free_get(v);
-        } else if (c == '\r') {
-            consume_crlf_tail(in);
-            if (!sv_push(v, '\0')) goto free;
-            return sv_free_get(v);
-        }
-
-        if (!sv_push(v, (char)c)) goto free;
-    }
-
-    if (!got_any) { // EOF case
-        handle_eof(in, out);
-        print("try again");
-        sv_free(v);
-        goto read;
-    }
-
-    if (!sv_push(v, '\0')) goto free;
-    return sv_free_get(v);
-free:
-    sv_free(v);
-    return NULL;
-#elif defined(FGETS_STR)
-    char tmp[BUF_LEN], *str;
-    int red;
-    bool hadN;
-read:;;
-    if (fgets(ARR_L(tmp), in) == NULL) {
-        if (feof(in))
-            handle_eof(in, out);
-        fprintf(out, "try again");
-        goto read;
-    }
-    // here tmp is nicely set
-    red = strlen(tmp);
-    hadN = false;
-    while (red > 0 && (tmp[red-1] == '\r' || tmp[red-1] == '\n')) {
-        // Fgets reads the new line as char, and puts it in the buffer
-        // here I don't want that, so manual removal
-        // TODO: we should also handle windows \r\n
-        tmp[--red] = '\0';
-        hadN = true;
-    }
-   
-    // Check if we read without a newline
-    if (red > 0 && !hadN) {
-        if (feof(in)) // EOF
-            handle_eof(in out);
-        else // not EOF -> there is more on the input
-            drain_line(in);
-    }
-
-    str = (char*)malloc(sizeof(char) * (red + 1));
-    if (!str) {
-        fprintf(stderr, "malloc failed");
-        return NULL;
-    }
-    memcpy(str, tmp, red);
-    str[red] = '\0';
-    return str;
-#else /* non DYN and non FGETS */
-// old clunky, but finally works with EOF
-    char tmp[BUF_LEN], *str;
-    int red, c;
-read:;;
-    c = getchar();
-
-    if (c == EOF) {
-        handle_eof(in, out);
-        fprintf(out, "try again");
-        goto read;
-    } else if (c == '\n')
-        goto memalloc; // we do allow empty
-
-    tmp[0] = (char)c;
-    red = 1;
-
-    while ((c = getchar()) != '\n' && red < BUF_LEN) {
-        /* EOF after a partial line: accept what we got */
-        if (c == EOF) {
-            handle_eof(in, out);
-            break;
-        }
-        tmp[red++] = (char)c;
-    }
-    if (red == BUF_LEN)
-        drain_line(in);
-memalloc:
-    str = (char*)malloc(sizeof(char) * (red + 1));
-    if (!str) {
-        fprintf(stderr, "malloc failed");
-        return NULL;
-    }
-    memcpy(str, tmp, red);
-    str[red] = '\0';
-    return str;
-#endif /* DYN_STR */
-}
-
-char *inp_str_s(const char *text) {
-    char *buf;
-    int len;
-    (void*)input_string(stdin, stdout, &buf, &len, text);
-    return buf;
-}
-
-
-char *read_str(const char *msg, char* buf, int bufs) {
-    if (msg) {
-        fputs(msg, stdout);
-        fflush(stdout);
-    }
-    if (!fgets(buf, bufs, stdin))
-        return NULL;
-    int l = strlen(buf);
-    if (l == 0)
-        return NULL;
-    while (l > 0 && (buf[l -1] == '\r' || buf[l -1] == '\n'))
-        buf[--l] = '\0'; // remove new line
-   
-    return buf;
-}
 
 
 /* parsers */

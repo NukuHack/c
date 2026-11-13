@@ -9,19 +9,27 @@
 #include <stdbool.h> // bool
 #include <stddef.h> // size_t as length
 
+#if defined(MY_MEMCHECK)
+#include "memcheck.h"
+#endif
+
 #if !defined(ARR_L) && !defined(ARR_S)
 #  define ARR_L(x) x, ARR_S(x)
 #  define ARR_S(x) sizeof(x)/sizeof(x[0])
 #endif /* ARR_L and ARR_S */
 
-#ifdef __NOT_DEFINED
+#ifndef ZERO
 // so i have sintax highlight in "if 0"
-#  undef __NOT_DEFINED
-#endif /* __NOT_DEFINED */
+#  define ZERO 0
+#endif /* ZERO */
 
 #ifndef LLU
 #  define LLU long long unsigned int
 #endif /* LLU */
+
+#if defined(main_fn)
+#  define my_main main
+#endif /* main_fn */
 
 #if !defined(UINT_TYPE) && !defined(uint)
 #  define UINT_TYPE

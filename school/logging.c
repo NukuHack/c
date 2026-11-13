@@ -203,23 +203,24 @@ void log_msg(log_lvl lvl, const char *file, int line, const char *fmt, ...) {
 char *time_now(char *buf, size_t n) {
     time_t sec; long ms; struct tm tm;
 
-#define ULL unsigned long long
-#if defined(_WIN32)
+#if defined(_WIN32) // WIN version
     FILETIME ft; // imagine still using only 32 bits ...
     GetSystemTimeAsFileTime(&ft);
     ULL t100 =                       /* 100 ns ticks since 1601 */
-        ((ULL)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+            ((ULL)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
     t100 -= 116444736000000000ULL;   /* rebase 1601 -> 1970 */
 
     ULL ms_total = t100 / 10000ULL;  /* 100ns -> ms */
     sec = (time_t)(ms_total / 1000ULL);
     ms  = (long)(ms_total % 1000ULL);
+
 #  if defined(_MSC_VER)
-    localtime_s(&tm, &sec);          /* (tm*, time_t*) */
+        localtime_s(&tm, &sec);          /* (tm*, time_t*) */
 #  else
-    localtime_r(&sec, &tm);          /* MinGW */
+        localtime_r(&sec, &tm);          /* MinGW */
 #  endif
-#else
+
+#else // POSIX version
     struct timeval tv;
     gettimeofday(&tv, NULL);
     sec = tv.tv_sec;
@@ -227,9 +228,17 @@ char *time_now(char *buf, size_t n) {
     localtime_r(&sec, &tm);
 #endif
 
+#if ZERO // most basic way
+    sec = time(NULL);
+    tm = gmtime(&sec);
+    printf(" UTC:  %s", asctime(tm));
+    tm = localtime(&sec);
+    printf("local: %s", asctime(tm));
+#endif
+
     int k = snprintf(buf, n, "%04d-%02d-%02dT%02d:%02d:%02d.%03ld",
-                     tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                     tm.tm_hour, tm.tm_min, tm.tm_sec, ms);
+             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+             tm.tm_hour, tm.tm_min, tm.tm_sec, ms);
     return (k < 0 || (size_t)k >= n) ? NULL : buf;
 }
 

@@ -5,6 +5,10 @@
 #include <stdlib.h> // NULL
 #include <stddef.h> // size_t
 
+#if defined(MY_MEMCHECK)
+#include "memcheck.h"
+#endif
+
 #if !defined(ARR_L) && !defined(ARR_S)
 #  define ARR_L(x) x, ARR_S(x)
 #  define ARR_S(x) sizeof(x)/sizeof(x[0])

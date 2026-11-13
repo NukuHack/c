@@ -5,6 +5,10 @@
 #include <stdlib.h> // null
 #include <stdbool.h> // bool 
 
+#if defined(MY_MEMCHECK) && 0
+#include "memcheck.h" // can't recursively import it
+#endif
+
 typedef enum {
     TRACE = 5,
     DEBUG = 4,
