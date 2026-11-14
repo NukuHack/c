@@ -13,14 +13,12 @@ if [ "$#" -eq 0 ]; then
     exit 1
 fi
 
-base_flags="-W -Wall -Wextra \
-    -Wconversion -Warray-bounds -Wunused -Wwrite-strings -Wswitch -Wswitch-bool \
-    -Wmaybe-uninitialized -Waddress -Waggregate-return -Waggressive-loop-optimizations \
-    -pedantic -Wpedantic -std=c99 -g "
-bad_flags=" -Wtraditional"
-leaky="-fsanitize=leak " # this is for mem leaks
-undef="-fsanitize=undefined " # this is for heap corruption
-flags3="gcc my_utils.c logging.c input.c memcheck.h -o exe -Dinput_main='main' -DDYN_STR -DMY_MEMCHECK $flags2"
+base_flags="-W -Wall -Wextra -Wconversion -Warray-bounds -Wunused -Wwrite-strings \
+-Wswitch -Wswitch-bool -Wmaybe-uninitialized -Waddress -Waggregate-return \
+-Waggressive-loop-optimizations -pedantic -Wpedantic -std=c99 -g "
+manual_flags=" -DMY_MEMCHECK -DLOGGING=5 "
+leaky=" -fsanitize=leak " # this is for mem leaks
+undef=" -fsanitize=undefined " # this is for heap corruption
 inp="$1"
 log_file="latest.log"
 
@@ -47,7 +45,13 @@ main_fn() {
             cbuild input.c my_utils.c -m input_main $flag -DDYN_STR
             ;;
         "-f")
-            echo "gcc <input-file> -o <output-file> $base_flags $leaky"
+            echo "gcc <input-file> -o <output-exe>"
+            echo "cbuild <input-file> -o <output-exe> -c <combined-code>"
+            echo "flags:
+base : $base_flags
+leak test : $leaky
+manual : $manual_flags
+undefined test : $undef"
             ;;
         *)
             echo "$Usage"

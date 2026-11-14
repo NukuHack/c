@@ -1,5 +1,4 @@
 #define _POSIX_C_SOURCE 200809L
-#define MY_MEMCHECK_IMPL
 #include "my_utils.h" // self
 #include <stdlib.h> // NULL
 #include <time.h> // time, random seeding
