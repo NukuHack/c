@@ -1,5 +1,5 @@
-#define MY_MEMCHECK_IMPL
 #define _POSIX_C_SOURCE 200809L
+#define MY_MEMCHECK_IMPL
 #include "my_utils.h" // self
 #include <stdlib.h> // NULL
 #include <time.h> // time, random seeding
@@ -89,6 +89,10 @@ void err(const char* str) {
 int cmp(int a, int b) {
     return (a > b) - (a < b);
 }
+int cmp_int_ptr(const void *a, const void *b) {
+    int x = *(const int*)a, y = *(const int*)b;
+    return cmp(x, y);
+}
 
 void clear(void) {
     #if defined(WIN)
@@ -105,7 +109,7 @@ void slep(double millis) {
 #else
     struct timespec ts;
     ts.tv_sec  = (time_t)(millis / 1000.0);
-    ts.tv_nsec = (long)((millis - ts.tv_sec * 1000.0) * 1e6);
+    ts.tv_nsec = (long)((millis - (double)ts.tv_sec * 1000.0) * 1e6);
     while (nanosleep(&ts, &ts) == -1 && errno == EINTR);
 #endif
 }
@@ -142,7 +146,7 @@ int count_words(const char *str, const char *sep) {
         if(str) str += strspn(str, sep); // skip separator
         ++cnt; // increment word count
     } while(str && *str);
-    return cnt;
+    return cnt-1;
 }
 
 void strrep(char *str, int len, char old, char upd) {
@@ -182,12 +186,12 @@ char *temp_dir(void) {
     char arr[1024];
     GetTempPathA(1024, arr);
 #else
-    char *arr;
+    const char *arr;
     arr = getenv("TMPDIR");
     if(!arr) arr = getenv("TMP");
     if(!arr) arr = getenv("TEMP");
-#endif
     if (!arr) arr = "/tmp";
+#endif
     size_t l = strlen(arr); // here we assume it is a real dir and not just a '/'
     tmp = (char*)malloc(sizeof(char) * l + 1);
     if (!tmp) {

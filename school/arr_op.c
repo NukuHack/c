@@ -105,6 +105,12 @@ void arr_bubble(int *arr, size_t len) {
                 arr[j + 1] = tmp;
             }
 }
+void arr_qsort(int *arr, size_t len) {
+    if (!arr || len == 0)
+        return;
+
+    qsort(arr, len, sizeof(int), cmp_int_ptr);
+}
 
 // "evaulate" everything only once
 #define array_reverse(Ty, arr, len)                                           \

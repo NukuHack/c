@@ -22,7 +22,7 @@
 #endif
 
 #if defined(LOG_FILE)
-char *log_file = LOG_FILE;
+const char *log_file = LOG_FILE;
 #else
 char *log_file = NULL;
 #endif
@@ -51,8 +51,8 @@ void log_setlvl(log_lvl _lvl) {
 // and use the buffering (or a custom buffer+flush) system to make it better
 int log_main(void) {
 #if !defined(LOG_FILE)
-    char *file = "/latest.log",
-         *tmp = temp_dir();
+    const char *file = "/latest.log";
+    char *tmp = temp_dir();
     size_t tmp_l = strlen(tmp),
         file_l = strlen(file);
     log_file = (char*)malloc(sizeof(char) * (tmp_l + file_l + 1));
@@ -121,7 +121,7 @@ void log_line(log_lvl lvl, const char *msg) {
     if (show_time)
         time_now(t_arr, 24);
 
-    int len = 0;
+    size_t len = 0;
     bool endN = true; // ends with new line
     if (msg && (len = strlen(msg)) > 0)
         endN = msg[len-1] == '\n';
@@ -194,7 +194,7 @@ void log_msg(log_lvl lvl, const char *file, int line, const char *fmt, ...) {
     // Then append the formatted message using va_args
     va_list args;
     va_start(args, fmt);
-    vsnprintf(buf + written, sizeof(buf) - written, fmt, args);
+    vsnprintf(buf + (size_t)written, sizeof(buf) - (size_t)written, fmt, args);
     va_end(args);
 
     log_line(lvl, buf);

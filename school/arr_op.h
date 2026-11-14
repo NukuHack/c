@@ -39,6 +39,8 @@ void arr_fill(int *arr, size_t len, int num);
 
 // Bubble sort (ascending)
 void arr_bubble(int *arr, size_t len);
+// qsort, it is just a wrapper for the std's impl
+void arr_qsort(int *arr, size_t len);
 // Reverse the array in place
 void arr_rev(int *arr, size_t len);
 // Multiply two arrays element-wise into mult

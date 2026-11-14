@@ -14,6 +14,7 @@
 #define IO stdin,stdout
 #define destroy(a) do { free(a);a=NULL; }while(0)
 
+#if ZERO
 int input_main(void) {
     int size = inp_int_s("inp number [0,10]: ", 0, 10);
     printf("got: %d\n", size);
@@ -35,6 +36,7 @@ int input_main(void) {
 
     return 0;
 }
+#endif /* main - ZERO */
 
 /* helpers */
 
@@ -326,13 +328,13 @@ read:
     ch = fgetc(in);
     if (ch == EOF) {
         handle_eof(in, out);
-        print("try again");
+        fprintf(out, "try again");
         goto read;
     }
 
     if (ch == '\n' || ch == '\r') {
         if (ch == '\r') consume_crlf_tail(in);
-        print("input a char (char)");
+        fprintf(out, "input a char (char)");
         goto read;
     }
 
@@ -344,12 +346,12 @@ read:
 
     if (c != '\n' && c != EOF) { // EOF case
         drain_line(in, out);
-        print("input a char (char)");
+        fprintf(out, "input a char (char)");
         goto read;
     }
 
     if (filter && !filter(ch)) {
-        print("wrong char [not allowed]");
+        fprintf(out, "wrong char [not allowed]");
         goto read;
     }
 
@@ -460,7 +462,7 @@ void input_string(FILE *in, FILE *out, char **buf, size_t len, bool dynamic, con
         } while ((c = fgetc(in)) != EOF);
     } else { // EOF case
         handle_eof(in, out);
-        print("try again");
+        fprintf(out, "try again");
         *buf = sv_free_get(v);
         goto read;
     }
@@ -477,7 +479,7 @@ void input_string(FILE *in, FILE *out, char **buf, size_t len, bool dynamic, con
     if (!b)
         return;
   read:;;
-    if (!fgets(b, len, in)) {
+    if (!fgets(b, (int)len, in)) {
         if (feof(in))
             handle_eof(in, out);
         fprintf(out, "try again");
@@ -577,13 +579,13 @@ read:
             return val;
         case INPUT_EOF:
             handle_eof(IO);
-            print("closed input, but retry");
+            printf("closed input, but retry");
             goto read;
         case INPUT_RANGE:
             printf("input a number in [%d,%d]\n", min, max);
             goto read;
         default:
-            print(input_status_str(r));
+            printf(input_status_str(r));
             goto read;
     }
 }
@@ -604,13 +606,13 @@ read:
             return val;
         case INPUT_EOF:
             handle_eof(IO);
-            print("closed input, but retry");
+            printf("closed input, but retry\n");
             goto read;
         case INPUT_RANGE:
             printf("input a number in [%u,%u]\n", min, max);
             goto read;
         default:
-            print(input_status_str(r));
+            printf("%s\n",input_status_str(r));
             goto read;
     }
 }
@@ -631,13 +633,13 @@ read:
             return val;
         case INPUT_EOF:
             handle_eof(IO);
-            print("closed input, but retry");
+            printf("closed input, but retry\n");
             goto read;
         case INPUT_RANGE:
             printf("input a number in [%f,%f]\n", min, max);
             goto read;
         default:
-            print(input_status_str(r));
+            printf("%s\n",input_status_str(r));
             goto read;
     }
 }

@@ -26,8 +26,8 @@ int main(int _argc, char **_argv) {
                           return 1;
 
                       int wc = count_words(buf, " "); // uses string.h underneath
-                      int cc = strlen(buf);
-                      printf("word count: %i, char count: %i \n", wc, cc);
+                      size_t cc = strlen(buf);
+                      printf("word count: %d, char count: %ld \n", wc, cc);
                   } break;
         case (2) : {
                        char buf[1024];
@@ -52,13 +52,14 @@ int main(int _argc, char **_argv) {
                           return 1;
                       char bufcpy[1024];
 
-                      memcpy(bufcpy, buf, strlen(buf));
+                      size_t len = strlen(buf);
+                      memcpy(bufcpy, buf, len + 1);
 
                       printf("copied string \n%s\n", bufcpy);
                   } break;
         case(4) : { 
                       char arrbuf[1024] = "apple";
-                      char *ptrbuf = "apple";
+                      const char *ptrbuf = "apple";
 
                       printf("s1, arr) %s\ns2, prt) %s\n", arrbuf, ptrbuf);
 
@@ -74,85 +75,112 @@ int main(int _argc, char **_argv) {
                       char file_name[1024];
                       if(!read_str("input the filename: ", ARR_L(file_name)))
                           return 1;
+                      size_t n = 1024;
+                      char *buf = (char*)malloc(n * sizeof(char));
+                      if (!buf) {
+                          fprintf(stderr, "could not malloc %lu bytes\n", n);
+                          return 1;
+                      }
                       FILE *file = fopen(file_name, "r");
                       if (!file) {
                           fprintf(stderr, "could not open file %s\n", file_name);
+                          free(buf);
                           return 1;
                       }
-                      char buf[1024];
-                      if (!fgets(ARR_L(buf), file)) {
+
+                      ptrdiff_t red = fgetfile(&buf, &n, file);
+                      if (red < 0) {
                           err("could not read from file");
                           fclose(file);
+                          free(buf);
                           return 1;
                       }
-                      fclose(file);
-                      int len = strlen(buf);
-                      if (len <= 0) {
+                      fclose(file); file = NULL;
+
+                      if (n == 0) {
                           err("no data in file");
+                          free(buf);
                           return 1;
                       }
                       printf("file data : \n%s\n", buf);
 
-                      for(int i = 0; i<len; i++)
-                          buf[i] = toupper(buf[i]);
+                      for(size_t i = 0; i<n; i++)
+                          buf[i] = (char)toupper(buf[i]);
 
                       printf("file data uppercase : \n%s\n", buf);
+                      free(buf);
                   } break;
         case(6) : {
                       char file_name[1024];
                       if(!read_str("input the filename: ", ARR_L(file_name)))
                           return 1;
+                      size_t n = 1024;
+                      char *buf = (char*)malloc(n * sizeof(char));
+                      if (!buf) {
+                          fprintf(stderr, "could not malloc %lu bytes\n", n);
+                          return 1;
+                      }
                       FILE *file = fopen(file_name, "r");
-                      if (!file) {
-                          err("could not open file");
-                          return 1;
-                      }
-                      char buf[1024];
-                      if (!fgets(ARR_L(buf), file)) {
-                          err("could not read from file");
-                          fclose(file);
-                          return 1;
-                      }
-                      fclose(file); file = NULL;
-                      int len = strlen(buf);
-                      if (len <= 0) {
-                          err("no data in file");
-                          return 1;
-                      }
-                      // printf("file data : \n%s\n", buf);
+                      goto body;
+err:;;
+    if (file) {
+        fclose(file);
+    }
+    if (buf) {
+        free(buf);
+    }
+    return 1;
+body:;;
+     if (!file) {
+         err("could not open file");
+         goto err;
+     }
+     ptrdiff_t red = fgetfile(&buf, &n, file);
+     if (red < 0) {
+         err("could not read from file");
+         goto err;
+     }
+     fclose(file); file = NULL;
 
-                      for(int i = 0; i<len; i++)
-                          buf[i] = toupper(buf[i]);
+     if (n == 0) {
+         err("no data in file");
+         goto err;
+     }
+     // printf("file data : \n%s\n", buf);
 
-                      // printf("file data uppercase : \n%s\n", buf);
-                      if(!read_str("input destination file: ", ARR_L(file_name)))
-                          return 1;
-                      if (check_file_exist(file_name)) {
-                          err("file already exists");
-                          return 1;
-                      }
-                      file = fopen(file_name, "w");
-                      if (!file) {
-                          err("could not open file");
-                          return 1;
-                      }
-                      int ch_printed = 0;
-                      int pr = 0;
-                      while (1) { // used like a label + goto
-                          pr = fprintf(file, "%s", buf + ch_printed);
-                          if (pr > 0 && ch_printed < len) {
-                              ch_printed += pr;
-                              continue;
-                          }
-                          else if (ch_printed == len)
-                              print("wrote everything sucessfully");
-                          else if (pr <= 0)
-                              err("error, probably ...");
+     for(size_t i = 0; i<n; i++)
+         buf[i] = (char)toupper(buf[i]);
 
-                          break;
-                      }
+     // printf("file data uppercase : \n%s\n", buf);
+     if(!read_str("input destination file: ", ARR_L(file_name)))
+         goto err;
+     if (check_file_exist(file_name)) {
+         err("file already exists");
+         goto err;
+     }
+     file = fopen(file_name, "w");
+     if (!file) {
+         err("could not open file");
+         goto err;
+     }
+     size_t ch_printed = 0;
+     int pr = 0;
+     while (1) { // used like a label + goto
+         pr = fprintf(file, "%s", buf + ch_printed);
+         if (pr > 0 && ch_printed < n) {
+             ch_printed += (size_t)pr;
+             continue;
+         }
+         else if (ch_printed == n)
+             print("wrote everything sucessfully");
+         else if (pr <= 0)
+             err("error, probably ...");
 
-                      fclose(file);
+         break;
+     }
+
+     fclose(file);
+     free(buf);
                   } break;
 
         default : {

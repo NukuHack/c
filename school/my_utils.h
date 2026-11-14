@@ -18,6 +18,16 @@
 #  define ARR_S(x) sizeof(x)/sizeof(x[0])
 #endif /* ARR_L and ARR_S */
 
+#if !defined(MIN)
+#  define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif /* MIN */
+#if !defined(MAX)
+#  define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif /* MAX */
+#if !defined(ABS)
+#  define ABS(a) ((a) < 0 ? -(a) : (a))
+#endif /* ABS */
+
 #ifndef ZERO
 // so i have sintax highlight in "if 0"
 #  define ZERO 0
@@ -26,10 +36,9 @@
 #ifndef LLU
 #  define LLU long long unsigned int
 #endif /* LLU */
-
-#if defined(main_fn)
-#  define my_main main
-#endif /* main_fn */
+#ifndef LL
+#  define LL long long int
+#endif /* LL */
 
 #if !defined(UINT_TYPE) && !defined(uint)
 #  define UINT_TYPE
@@ -69,6 +78,8 @@ char *temp_dir(void);
 
 // compare, ++ = a bigger, -- = b bigger, 0 = equal
 int cmp(int a, int b);
+// same as above, just for pointers
+int cmp_int_ptr(const void *a, const void *b);
 // generate a random between bounds
 int rand_int(int min, int max);
 // randm double (float) , 0-1
