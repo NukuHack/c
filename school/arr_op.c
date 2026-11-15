@@ -1,6 +1,4 @@
 #include "arr_op.h" // self
-#include <stdio.h> // printf
-#include "my_utils.h" // for random
 
 #define LENGTH 20
 

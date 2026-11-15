@@ -1,14 +1,6 @@
-#include <stdio.h> // basic io
-#include <stdlib.h> // "NULL" + mem
-#include <string.h> // memory op
 #include <ctype.h> // char conversion
-#include <stdbool.h> // bool
 #include "my_utils.h" // better io (renamed from small_lib.h)
 #include "input.h" // input
-
-#if defined(MY_MEMCHECK)
-#include "memcheck.h"
-#endif
 
 int main(int _argc, char **_argv) {
     int argc = _argc;
@@ -21,7 +13,7 @@ int main(int _argc, char **_argv) {
 
     switch(atoi(argv[1])) {
         case(1) : {
-                      char buf[1024];
+                      char buf[BUF_LEN];
                       if(!read_str("input a line: ", ARR_L(buf)))
                           return 1;
 
@@ -30,10 +22,10 @@ int main(int _argc, char **_argv) {
                       printf("word count: %d, char count: %ld \n", wc, cc);
                   } break;
         case (2) : {
-                       char buf[1024];
+                       char buf[BUF_LEN];
                        if(!read_str("input a line: ", ARR_L(buf)))
                            return 1;
-                       char buf2[1024];
+                       char buf2[BUF_LEN];
                        if(!read_str("input another line: ", ARR_L(buf2)))
                            return 1;
 
@@ -47,10 +39,10 @@ int main(int _argc, char **_argv) {
                        }
                    } break;
         case(3) : {
-                      char buf[1024];
+                      char buf[BUF_LEN];
                       if(!read_str("a line to copy: ", ARR_L(buf)))
                           return 1;
-                      char bufcpy[1024];
+                      char bufcpy[BUF_LEN];
 
                       size_t len = strlen(buf);
                       memcpy(bufcpy, buf, len + 1);
@@ -58,7 +50,7 @@ int main(int _argc, char **_argv) {
                       printf("copied string \n%s\n", bufcpy);
                   } break;
         case(4) : { 
-                      char arrbuf[1024] = "apple";
+                      char arrbuf[BUF_LEN] = "apple";
                       const char *ptrbuf = "apple";
 
                       printf("s1, arr) %s\ns2, prt) %s\n", arrbuf, ptrbuf);
@@ -72,10 +64,10 @@ int main(int _argc, char **_argv) {
 
                   } break;
         case(5) : {
-                      char file_name[1024];
+                      char file_name[BUF_LEN];
                       if(!read_str("input the filename: ", ARR_L(file_name)))
                           return 1;
-                      size_t n = 1024;
+                      size_t n = BUF_LEN;
                       char *buf = (char*)malloc(n * sizeof(char));
                       if (!buf) {
                           fprintf(stderr, "could not malloc %lu bytes\n", n);
@@ -111,10 +103,10 @@ int main(int _argc, char **_argv) {
                       free(buf);
                   } break;
         case(6) : {
-                      char file_name[1024];
+                      char file_name[BUF_LEN];
                       if(!read_str("input the filename: ", ARR_L(file_name)))
                           return 1;
-                      size_t n = 1024;
+                      size_t n = BUF_LEN;
                       char *buf = (char*)malloc(n * sizeof(char));
                       if (!buf) {
                           fprintf(stderr, "could not malloc %lu bytes\n", n);

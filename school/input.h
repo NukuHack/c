@@ -1,19 +1,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#include <stdio.h> // io
-#include <stdbool.h> // bool
-#include <stddef.h> // size_t, ptrdiff_t aka ssize_t
-
-#if defined(MY_MEMCHECK)
-#include "memcheck.h"
-#endif
-
-#if !defined(UINT_TYPE) && !defined(uint)
-#  define UINT_TYPE
-   typedef unsigned int uint;
-#  define uint uint
-#endif /* UINT_TYPE */
+#include "my_utils.h" // all utility
 
 // used for char, allows stuff that returns true
 typedef int (predicate)(int);
@@ -27,7 +15,8 @@ typedef enum {
     INPUT_OVERFLOW,    /* doesn't fit in the target type */
     INPUT_STOPPED,     /* parsed a value; stopped at a non-closing char */
     INPUT_RANGE,       /* outside [min, max] */
-    INPUT_SEP          /* input_sep: expected char not found */
+    INPUT_SEP,         /* input_sep: expected char not found */
+    INPUT_IOERR        /* error on the input/output not "EOF" */
 } inp_res;
 
 const char *input_status_str(inp_res s);

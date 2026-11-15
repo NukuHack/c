@@ -16,7 +16,8 @@ fi
 base_flags="-W -Wall -Wextra -Wconversion -Warray-bounds -Wunused -Wwrite-strings \
 -Wswitch -Wswitch-bool -Wmaybe-uninitialized -Waddress -Waggregate-return \
 -Waggressive-loop-optimizations -pedantic -Wpedantic -std=c99 -g "
-manual_flags=" -DMY_MEMCHECK -DLOGGING=5 "
+manual_flags=" -DMY_MEMCHECK -DMY_LOGGING=5 "
+manual_files="logging.c memcheck.c "
 leaky=" -fsanitize=leak " # this is for mem leaks
 undef=" -fsanitize=undefined " # this is for heap corruption
 inp="$1"
@@ -35,7 +36,7 @@ main_fn() {
             cbuild input.c my_utils.c -m input_main $flag -DDYN_STR
             ;;
         "-mem")
-            flag="-Xcc $base_flags $leaky"
+            flag="$manual_files -Xcc $base_flags $leaky $manual_flags"
             cbuild my_utils.c $flag -Dmy_main='main'
             cbuild arr_op.c my_utils.c -m arr_main $flag
             # cbuild list_main.c list.c my_utils.c $flag

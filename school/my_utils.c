@@ -1,15 +1,10 @@
 #define _POSIX_C_SOURCE 200809L
 #include "my_utils.h" // self
-#include <stdlib.h> // NULL
 #include <time.h> // time, random seeding
 #include <limits.h> // RAND_MAX
-#include <string.h> // batch-mem op
 
 // for sleep & terminal
-#if defined(_WIN32) || defined(_WIN64)
-#  if !defined(WIN)
-#    define   WIN
-#  endif /* win-def */
+#if defined(WIN)
 #  include <windows.h>
 #  include <conio.h>
 #else
@@ -19,6 +14,7 @@
 #  include <sys/ioctl.h>
 #endif
 
+const char *const units[] = {"B","KB","MB","GB","TB","PB","EB"};
 
 int my_main(int argc, char **argv) {
     do {
@@ -124,6 +120,57 @@ char **shift_args(int *argc, char ***argv) {
     return arg;
 }
 
+char *fmt_num(LLU v, char *buf, size_t buflen) {
+    int MAX_TIER = ARR_S(units)-1; /* index of the max */
+
+    if (!buf || buflen == 0)
+        return buf;
+    if (v < 1000ULL) {
+        snprintf(buf, buflen, "%llu B", v);
+        return buf;
+    }
+
+    /* 1. Find tier: d = 1000^tier, the largest power with v / d >= 1.
+     *    1000^6 = 1e18 fits in 64 bits, and v/1e18 <= 18, so the loop
+     *    can never run past EB. */
+    unsigned long long d = 1ULL;
+    int tier = 0;
+    while (tier < MAX_TIER && v / d >= 1000ULL) { d *= 1000ULL; ++tier; }
+
+    unsigned long long ip  = v / d;             /* integer part, 1..999 */
+    unsigned long long rem = v % d;             /* remainder, < d <= 1e18 */
+
+    /* 2. 5 significant digits total. */
+    int decimals = 5 - ((ip >= 100) ? 3 : (ip >= 10) ? 2 : 1);
+
+    /* 3. Exact long division for the fractional digits.
+     *    rem * 10 < 1e19 < 2^64, so it never overflows. */
+    unsigned frac = 0, pow10 = 1;
+    for (int i = 0; i < decimals; ++i) {
+        rem *= 10;
+        frac = frac * 10 + (unsigned)(rem / d);
+        rem %= d;
+        pow10 *= 10;
+    }
+
+    /* 4. Round half up on the exact remainder, then propagate carries. */
+    if (rem * 2 >= d && ++frac == pow10) {
+        frac = 0;
+        if (++ip == 1000ULL && tier < MAX_TIER) { ip = 1; ++tier; }
+    }
+
+    /* 5. Fraction digits, trailing zeros trimmed. */
+    char dig[4];
+    for (int i = decimals - 1; i >= 0; --i) { dig[i] = (char)('0' + frac % 10); frac /= 10; }
+    while (decimals > 0 && dig[decimals - 1] == '0') --decimals;
+
+    if (decimals)
+        snprintf(buf, buflen, "%llu.%.*s %s", ip, decimals, dig, units[tier]);
+    else
+        snprintf(buf, buflen, "%llu %s", ip, units[tier]);
+    return buf;
+}
+
 // ptr to first in alphab. ord.
 char *alphabetic(char *a, char *b) {
     int r = 0;
@@ -137,15 +184,16 @@ char *alphabetic(char *a, char *b) {
 int count_words(const char *str, const char *sep) {
     int cnt = 0;
     if (!str || !*str) return 0;
+    if (*str == ' ') cnt--;
     do {
         str = strpbrk(str, sep); // find separator
-          // if we use string-span instead of skip one char
+          // string-span would only skip one char
           // we also skip multiple of the separators if present
           // like "apple    tree" is still 2 words
         if(str) str += strspn(str, sep); // skip separator
         ++cnt; // increment word count
     } while(str && *str);
-    return cnt-1;
+    return cnt == -1 ? 0 : cnt;
 }
 
 void strrep(char *str, int len, char old, char upd) {
@@ -179,69 +227,45 @@ int main(void)
 #endif
 
 /* just for testing */
-char *temp_dir(void) {
-    char *tmp;
+const char *temp_dir(void) {
 #if defined(WIN)
-    char arr[1024];
-    GetTempPathA(1024, arr);
+    /* GetTempPathA requires a writable buffer; use a static one.
+       NOTE: not thread-safe, and the returned pointer is only valid until the next call. */
+    static char buf[MAX_PATH];
+    DWORD len = GetTempPathA(MAX_PATH, buf);
+    if (len == 0 || len >= MAX_PATH)
+        return ".";
+    return buf;
 #else
-    const char *arr;
-    arr = getenv("TMPDIR");
-    if(!arr) arr = getenv("TMP");
-    if(!arr) arr = getenv("TEMP");
-    if (!arr) arr = "/tmp";
+    const char *dir = NULL;
+    dir = getenv("TMPDIR");
+    if (!dir) dir = getenv("TMP");
+    if (!dir) dir = getenv("TEMP");
+#if defined(P_tmpdir)
+    if (!dir) dir = P_tmpdir;
+#else
+    if (!dir) dir = "/tmp";
 #endif
-    size_t l = strlen(arr); // here we assume it is a real dir and not just a '/'
-    tmp = (char*)malloc(sizeof(char) * l + 1);
-    if (!tmp) {
-        err("malloc fail");
-        return NULL;
-    }
-    memcpy(tmp, arr, l + 1);
-    return tmp;
+    return dir;
+#endif
+}
+
+/* cpu time, in sec */
+double bench_cpu_now(void) {
+    // some systems define clock_t as 32bit and CLOCKS_PER_SEC as 1mill
+    // so we can only reliably measure "half an hour" or so, but that should be fine
+    clock_t c = clock();
+    if (c == (clock_t)-1)
+        return -1.0;      /* clock() failure (rare) */
+    /* Cast BEFORE division so 32-bit clock_t can't overflow during
+       intermediate math, and "CLOCKS_PER_SEC" of 1e3 or 1e6 both work. */
+    return (double)c / (double)CLOCKS_PER_SEC;
 }
 
 /**
  * FILE stuff :
  * */
 
-#if ZERO
-size_t fwrite( const void* buffer, size_t size, size_t count, FILE* stream );
-#endif
-
-// Writes count of objects from the given array buffer to the output stream stream. The objects are written as if by reinterpreting each object as an array of unsigned char and calling fputc size times for each object to write those unsigned chars into stream, in order. The file position indicator for the stream is advanced by the number of characters written.
-//
-// If an error occurs, the resulting value of the file position indicator for the stream is indeterminate.
-// Parameters
-// buffer   -   pointer to the first object in the array to be written
-// size     -   size of each object
-// count    -   the number of the objects to be written
-// stream   -   pointer to the output stream
-// Return value
-//
-// The number of objects written successfully, which will be less than count only if an error occurs.
-//
-// If size or count is zero, fwrite returns zero and performs no other action. 
-
-#if ZERO
-size_t fread( void* buffer, size_t size, size_t count, FILE* stream );
-#endif
-
-// Reads up to count objects into the array buffer from the given input stream stream as if by calling fgetc size times for each object, and storing the results, in the order obtained, into the successive positions of buffer, which is reinterpreted as an array of unsigned char. The file position indicator for the stream is advanced by the number of characters read.
-//
-// If an error occurs, the resulting value of the file position indicator for the stream is indeterminate. If a partial element is read, its value is indeterminate.
-// Parameters
-// buffer   -   pointer to the array where the read objects are stored
-// size     -   size of each object in bytes
-// count    -   the number of the objects to be read
-// stream   -   the stream to read
-// Return value
-//
-// Number of objects read successfully, which may be less than count if an error or end-of-file condition occurs.
-//
-// If size or count is zero, fread returns zero and performs no other action.
-//
-// fread does not distinguish between end-of-file and error, and callers must use feof and ferror to determine which occurred. 
 
 bool check_file_exist(const char *name) {
     FILE *file = fopen(name, "r"); // read does not create

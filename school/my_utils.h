@@ -1,16 +1,64 @@
 #ifndef MY_UTILS
 #define MY_UTILS
 
-#if 0
+#ifndef ZERO
+// so i have sintax highlight in "if 0"
+#  define ZERO 0
+#endif /* ZERO */
+
+#if ZERO
 #  define __STDC_WANT_LIB_EXT1__ 1 // this adds "safe" methods from std
 #endif
 
 #include <stdio.h> // io
 #include <stdbool.h> // bool
-#include <stddef.h> // size_t as length
+#include <stddef.h> // size_t, ptrdiff_t aka ssize_t
+#include <stdlib.h> // basic memory & NULL
+#include <string.h> // batch mem op
+
+#if !defined(BUF_LEN)
+#   if BUFSIZ < 1024
+#     define BUF_LEN 1024
+#   else
+#     define BUF_LEN BUFSIZ
+#   endif
+#endif /* BUF_LEN */
 
 #if defined(MY_MEMCHECK)
-#include "memcheck.h"
+#  undef MY_MEMCHECK
+#  include "memcheck.h"
+#endif
+
+#if defined(MY_LOGGING)
+#  if   MY_LOGGING == 0
+#    define LOGGING 0
+#  elif MY_LOGGING == 1
+#    define LOGGING 1
+#  elif MY_LOGGING == 2
+#    define LOGGING 2
+#  elif MY_LOGGING == 3
+#    define LOGGING 3
+#  elif MY_LOGGING == 4
+#    define LOGGING 4
+#  elif MY_LOGGING == 5
+#    define LOGGING 5
+#  elif MY_LOGGING == 6
+#    define LOGGING 6
+#  elif MY_LOGGING == 7
+#    define LOGGING 7
+#  elif MY_LOGGING == 8
+#    define LOGGING 8
+#  elif MY_LOGGING == 9
+#    define LOGGING 9
+#  endif
+#  undef MY_LOGGING
+#  include "logging.h"
+#endif
+
+#if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
+#  if !defined(WIN)
+#    define WIN
+#  endif /* win-def */
 #endif
 
 #if !defined(ARR_L) && !defined(ARR_S)
@@ -18,27 +66,16 @@
 #  define ARR_S(x) sizeof(x)/sizeof(x[0])
 #endif /* ARR_L and ARR_S */
 
-#if !defined(MIN)
+#if !defined(MIN) && !defined(MAX) && !defined(ABS)
 #  define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif /* MIN */
-#if !defined(MAX)
 #  define MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif /* MAX */
-#if !defined(ABS)
 #  define ABS(a) ((a) < 0 ? -(a) : (a))
-#endif /* ABS */
+#endif /* MIN-MAX-ABS */
 
-#ifndef ZERO
-// so i have sintax highlight in "if 0"
-#  define ZERO 0
-#endif /* ZERO */
-
-#ifndef LLU
+#if !defined(LLU) && !defined(LL)
 #  define LLU long long unsigned int
-#endif /* LLU */
-#ifndef LL
 #  define LL long long int
-#endif /* LL */
+#endif /* LLU-LL */
 
 #if !defined(UINT_TYPE) && !defined(uint)
 #  define UINT_TYPE
@@ -46,12 +83,41 @@
 #  define uint uint
 #endif /* UINT_TYPE */
 
+#if !defined(KB) && !defined(MB) && !defined(GB) // rest not listed
+extern const char *const units[];
+// #define B 1       //  byte      2**0
+#  define KB 1024    // kilobyte   2**10
+#  define MB KB * KB // megabyte   2**20
+#  define GB MB * KB // gigabyte   2**30
+#  define TB GB * KB // terrabyte  2**40
+#  define PB TB * KB // petabyte   2**50
+#  define EB PB * KB // exabyte    2**60
+#  define ZB EB * KB // zettabyte  2**70
+#  define YB ZB * KB // yottabyte  2**80
+#  define RB YB * KB // ronnabyte  2**90
+#  define QB RB * KB // qettabyte  2**100
+#endif
+
+#if !defined(WARN_UNUSED_RESULT)
+#  if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+     /* C23 */
+#    define WARN_UNUSED_RESULT [[nodiscard]]
+#  elif defined(__GNUC__) || defined(__clang__)
+     /* GCC, Clang, and GCC-compatible compilers */
+#    define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#  elif defined(_MSC_VER)
+#    include <sal.h>
+#    define WARN_UNUSED_RESULT _Check_return_
+#  else
+     /* Unknown compiler: :O */
+#    define WARN_UNUSED_RESULT
+#  endif
+#endif
+
 /* swap the data of 2 pointers */
 void mem_swap(void *a, void *b, size_t size);
-/* swap the values of 2 pinters */
+/* swap the values of 2 int */
 void swap(int *a, int *b);
-/* compare 2 int ptr (value), return bigger (a if eq) */
-int *cmpp(int *a, int *b);
 /* 2 pointers in alpha order, returns NULL if eq */
 char* alphabetic(char* a, char* b);
 /* count the words (separator take in) */
@@ -60,10 +126,12 @@ int count_words(const char *str, const char *sep);
 void strrep(char *str, int len, char old, char upd);
 /* shift argv, argc and return the shifted out variable */
 char **shift_args(int *argc, char ***argv);
+/* format a number */
+char *fmt_num(LLU v, char *buf, size_t buflen);
 
 // print the string + \n
 void print(const char* str);
-// print a single num + \n
+// print a single int + \n
 void printi(int num);
 // print a single new-line
 void printn(void);
@@ -74,12 +142,14 @@ void err(const char* str);
 // Sleeps for a given number of milliseconds
 void slep(double millis);
 // temp dir, caller has to free it
-char *temp_dir(void);
+const char *temp_dir(void);
 
 // compare, ++ = a bigger, -- = b bigger, 0 = equal
 int cmp(int a, int b);
 // same as above, just for pointers
 int cmp_int_ptr(const void *a, const void *b);
+/* compare 2 int ptr (value), return bigger (a if eq) */
+int *cmpp(int *a, int *b);
 // generate a random between bounds
 int rand_int(int min, int max);
 // randm double (float) , 0-1
@@ -89,6 +159,8 @@ double rand_double(void);
 /* FILE stuff */
 bool check_file_exist(const char *name);
 
+/* ---- CPU time ---- */
+double bench_cpu_now(void);
 
 #endif /* MY_UTILS */
 

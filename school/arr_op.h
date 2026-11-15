@@ -3,18 +3,9 @@
 #define ARR_OP_H
 
 #include <stdlib.h> // NULL
-#include <stddef.h> // size_t
+#include "my_utils.h" // all utility
 
-#if defined(MY_MEMCHECK)
-#include "memcheck.h"
-#endif
-
-#if !defined(ARR_L) && !defined(ARR_S)
-#  define ARR_L(x) x, ARR_S(x)
-#  define ARR_S(x) sizeof(x)/sizeof(x[0])
-#endif /* ARR_L and ARR_S */
-
-#if defined(__GNUC__) || defined(__clang__)
+#if !defined(NO_LAMBDA) && (defined(__GNUC__) || defined(__clang__))
 #  define LAMBDA(ret, args, body) __extension__ ({ ret lambda_fn_ args body lambda_fn_; })
 #endif
 // this expands somethign like this :
@@ -22,7 +13,7 @@
 // to this :
 // ({ void __fn__(void *p) { printf("%d\n", *(int *)p); } __fn__; })
 //
-// so nice ! - if GNUC not present panic at compile time !
+// so nice !
 
 // Returns max value, or 0
 int arr_max(const int *arr, size_t len);

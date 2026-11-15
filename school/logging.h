@@ -2,9 +2,7 @@
 #ifndef LOGGING_H
 #define LOGGING_H
 
-#include <stdlib.h> // null
-#include <stdbool.h> // bool 
-#include <stddef.h> // size_t
+#include "my_utils.h" // utils
 
 typedef enum {
     TRACE = 5,
@@ -29,41 +27,49 @@ typedef enum {
  */
 
 #if (LOGGING %10 >= 5 && LOGGING != 15)  || LOGGING == -5
-#  define LOG_TRACE(...)  log_msg(TRACE, __FILE__, __LINE__, __VA_ARGS__)
+#  define log_trace(...)  log_msg(TRACE, __FILE__, __LINE__, __VA_ARGS__)
+#  define log_trace_f(...)  log_msg(TRACE, NULL, 0, __VA_ARGS__)
 #else
-#  define LOG_TRACE(...)  ((void)0)
+#  define log_trace(...)  ((void)0)
+#  define log_trace_f(...)  ((void)0)
 #endif
 #if (LOGGING %10 >= 4 && LOGGING != 14)  || LOGGING == -4
-#  define LOG_DEBUG(...)  log_msg(DEBUG, __FILE__, __LINE__, __VA_ARGS__)
+#  define log_debug(...)  log_msg(DEBUG, __FILE__, __LINE__, __VA_ARGS__)
+#  define log_debug_f(...)  log_msg(DEBUG, NULL, 0, __VA_ARGS__)
 #else
-#  define LOG_DEBUG(...)  ((void)0)
+#  define log_debug(...)  ((void)0)
+#  define log_debug_f(...)  ((void)0)
 #endif
 #if (LOGGING %10 >= 3 && LOGGING != 13)  || LOGGING == -3
-#  define LOG_INFO(...)  log_msg(INFO, __FILE__, __LINE__, __VA_ARGS__)
+#  define log_info(...)  log_msg(INFO, __FILE__, __LINE__, __VA_ARGS__)
+#  define log_info_f(...)  log_msg(INFO, NULL, 0, __VA_ARGS__)
 #else
-#  define LOG_INFO(...)  ((void)0)
+#  define log_info(...)  ((void)0)
+#  define log_info_f(...)  ((void)0)
 #endif
 #if (LOGGING %10 >= 2 && LOGGING != 12)  || LOGGING == -2
-#  define LOG_WARN(...)  log_msg(WARN, __FILE__, __LINE__, __VA_ARGS__)
+#  define log_warn(...)  log_msg(WARN, __FILE__, __LINE__, __VA_ARGS__)
+#  define log_warn_f(...)  log_msg(WARN, NULL, 0, __VA_ARGS__)
 #else
-#  define LOG_WARN(...)  ((void)0)
+#  define log_warn(...)  ((void)0)
+#  define log_warn_f(...)  ((void)0)
 #endif
 #if (LOGGING %10 >= 1 && LOGGING != 11)  || LOGGING == -1
-#  define LOG_ERROR(...)  log_msg(ERROR, __FILE__, __LINE__, __VA_ARGS__)
+#  define log_error(...)  log_msg(ERROR, __FILE__, __LINE__, __VA_ARGS__)
+#  define log_error_f(...)  log_msg(ERROR, NULL, 0, __VA_ARGS__)
 #else
-#  define LOG_ERROR(...)  ((void)0)
+#  define log_error(...)  ((void)0)
+#  define log_error_f(...)  ((void)0)
 #endif
 
 // Variable length argruements !! so nice
 // format is printed through a std function
-void log_msg(log_lvl lvl, const char *file, int line, const char *fmt, ...);
-// non formatted, goes to file + stderr by default
 // only colored on stderr by default
-void log_line(log_lvl lvl, const char *msg);
+void log_msg(log_lvl lvl, const char *file, int line, const char *fmt, ...);
 
 // sets the global level - checked at runtime
 // might remove it in favor of preprocessor
-void log_set_global(log_lvl _lvl, bool _show_color, bool _show_color_file,
+void log_setglobal(log_lvl _lvl, bool _show_color, bool _show_color_file,
         bool _show_time, bool _use_file, bool _use_stderr);
 void log_setlvl(log_lvl _lvl);
 
@@ -71,8 +77,8 @@ void log_setlvl(log_lvl _lvl);
 void log_clear(void);
 
 /* small helpers */
-const char *loglvl_str(log_lvl lvl);
-const char *loglvl_col(log_lvl lvl);
+const char *log_lvlstr(log_lvl lvl);
+const char *log_lvlcol(log_lvl lvl);
 
 /* buff len >= 24, otherwise bug, local time :P */
 char *time_now(char *buf, size_t n);

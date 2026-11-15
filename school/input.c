@@ -4,17 +4,11 @@
 #include <math.h> // double stuff for overflow & NAN
 #include <errno.h> // error checking mainly "EOF" and "errno" at builtin stuff
 #include <ctype.h> // basic char methods
-#include <stdlib.h> // basic memory & NULL
-#include <string.h> // batch mem op
-
-#ifndef BUF_LEN
-#  define BUF_LEN 100
-#endif
 
 #define IO stdin,stdout
 #define destroy(a) do { free(a);a=NULL; }while(0)
+#define EOF_RETRY "closed input, but retry\n"
 
-#if ZERO
 int input_main(void) {
     int size = inp_int_s("inp number [0,10]: ", 0, 10);
     printf("got: %d\n", size);
@@ -36,7 +30,6 @@ int input_main(void) {
 
     return 0;
 }
-#endif /* main - ZERO */
 
 /* helpers */
 
@@ -69,12 +62,13 @@ void handle_eof(FILE *in, FILE *out) {
 }
 bool input_rejected(inp_res s) {
     // reject everything that is not Good or Error
-    return !(s == INPUT_OK || s == INPUT_EOF);
+    return !(s == INPUT_OK || s == INPUT_EOF || INPUT_IOERR);
 }
 bool input_drain_required(inp_res s) {
     switch (s) {
         default:
         case INPUT_EOF:
+        case INPUT_IOERR:
         case INPUT_EMPTY:
         case INPUT_OK: return false;
         case INPUT_SEP:
@@ -90,12 +84,13 @@ const char *input_status_str(inp_res s) {
         case INPUT_SEP: return "separator not found"; // 123;123 instead of 123-123
         case INPUT_NAN: return "not a number"; // apple
         case INPUT_EOF: return "end of input"; // EOF
+        case INPUT_IOERR: return "io error"; // ferror
         case INPUT_EMPTY: return "empty"; //  \n  -  \r\n
         case INPUT_RANGE: return "out of range"; // [10;40] - 300
         case INPUT_STOPPED: return "stopped (partially usable input)"; // 1234a
         case INPUT_OVERFLOW: return "overflow"; // more than 2^64 ...
+        default: return "unknown";
     }
-    return "unknown";
 }
 
 /* char-by-char read + parse -> no malloc */
@@ -321,6 +316,8 @@ inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, con
 // make it not prtint error, and move re-try outside
 // TODO : make it return "inp_res"
 void input_char(FILE *in, FILE *out, char *v, predicate *filter, const char *prompt) {
+#define retry_text "input a char (char)\n"
+#define not_allow "wrong char [not allowed]\n"
     int c, ch;
 read:
     if (prompt && out) { fputs(prompt, out); fflush(out); }
@@ -328,13 +325,13 @@ read:
     ch = fgetc(in);
     if (ch == EOF) {
         handle_eof(in, out);
-        fprintf(out, "try again");
+        fprintf(out, EOF_RETRY);
         goto read;
     }
 
     if (ch == '\n' || ch == '\r') {
         if (ch == '\r') consume_crlf_tail(in);
-        fprintf(out, "input a char (char)");
+        fprintf(out, retry_text);
         goto read;
     }
 
@@ -346,12 +343,12 @@ read:
 
     if (c != '\n' && c != EOF) { // EOF case
         drain_line(in, out);
-        fprintf(out, "input a char (char)");
+        fprintf(out, retry_text);
         goto read;
     }
 
     if (filter && !filter(ch)) {
-        fprintf(out, "wrong char [not allowed]");
+        fprintf(out, not_allow);
         goto read;
     }
 
@@ -369,22 +366,15 @@ typedef struct String_t {
 
 String* sv_create(void) {
     String* v = (String*)malloc(sizeof *v);
-    if (!v) {
-        err("malloc failed");
-        return NULL;
-    }
+    if (!v) return NULL;
     v->data = NULL;
     v->len = 0;
     v->sz = 0;
     return v;
 }
-
 String* sv_create_frm(char *buf, size_t len) {
     String* v = (String*)malloc(sizeof *v);
-    if (!v) {
-        err("malloc failed");
-        return NULL;
-    }
+    if (!v) return NULL;
     v->data = buf;
     v->len = 0;
     v->sz = len;
@@ -447,7 +437,10 @@ void input_string(FILE *in, FILE *out, char **buf, size_t len, bool dynamic, con
     int c;
   read:;;
     v = sv_create_frm(*buf, len);
-    if (!v) goto free;
+    if (!v) {
+        fprintf(out, "malloc failed");
+        goto free;
+    }
 
     if ((c = fgetc(in)) != EOF) {
         do {
@@ -462,7 +455,7 @@ void input_string(FILE *in, FILE *out, char **buf, size_t len, bool dynamic, con
         } while ((c = fgetc(in)) != EOF);
     } else { // EOF case
         handle_eof(in, out);
-        fprintf(out, "try again");
+        fprintf(out, EOF_RETRY);
         *buf = sv_free_get(v);
         goto read;
     }
@@ -482,7 +475,7 @@ void input_string(FILE *in, FILE *out, char **buf, size_t len, bool dynamic, con
     if (!fgets(b, (int)len, in)) {
         if (feof(in))
             handle_eof(in, out);
-        fprintf(out, "try again");
+        fprintf(out, EOF_RETRY);
         goto read; // retry only if we red nothing
     }
     size_t l = strlen(b);
@@ -505,7 +498,7 @@ void input_string(FILE *in, FILE *out, char **buf, size_t len, bool dynamic, con
     char *ptr;
     ptr = (char*)relloc(b, sizeof(char) * (l + 1));
     if (!ptr) {
-        fprintf(stderr, "malloc failed");
+        fprintf(out, "malloc failed");
         return;
     }
     *buf = ptr;
@@ -579,13 +572,13 @@ read:
             return val;
         case INPUT_EOF:
             handle_eof(IO);
-            printf("closed input, but retry");
+            printf(EOF_RETRY);
             goto read;
         case INPUT_RANGE:
             printf("input a number in [%d,%d]\n", min, max);
             goto read;
         default:
-            printf(input_status_str(r));
+            printf("%s\n",input_status_str(r));
             goto read;
     }
 }
@@ -606,7 +599,7 @@ read:
             return val;
         case INPUT_EOF:
             handle_eof(IO);
-            printf("closed input, but retry\n");
+            printf(EOF_RETRY);
             goto read;
         case INPUT_RANGE:
             printf("input a number in [%u,%u]\n", min, max);
@@ -633,7 +626,7 @@ read:
             return val;
         case INPUT_EOF:
             handle_eof(IO);
-            printf("closed input, but retry\n");
+            printf(EOF_RETRY);
             goto read;
         case INPUT_RANGE:
             printf("input a number in [%f,%f]\n", min, max);
@@ -723,6 +716,48 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     (*bufptr)[len] = '\0';
     return (ptrdiff_t)len;
 }
+
+
+
+
+#if ZERO
+size_t fwrite( const void* buffer, size_t size, size_t count, FILE* stream );
+#endif
+
+// Writes count of objects from the given array buffer to the output stream stream. The objects are written as if by reinterpreting each object as an array of unsigned char and calling fputc size times for each object to write those unsigned chars into stream, in order. The file position indicator for the stream is advanced by the number of characters written.
+//
+// If an error occurs, the resulting value of the file position indicator for the stream is indeterminate.
+// Parameters
+// buffer   -   pointer to the first object in the array to be written
+// size     -   size of each object
+// count    -   the number of the objects to be written
+// stream   -   pointer to the output stream
+// Return value
+//
+// The number of objects written successfully, which will be less than count only if an error occurs.
+//
+// If size or count is zero, fwrite returns zero and performs no other action. 
+
+#if ZERO
+size_t fread( void* buffer, size_t size, size_t count, FILE* stream );
+#endif
+
+// Reads up to count objects into the array buffer from the given input stream stream as if by calling fgetc size times for each object, and storing the results, in the order obtained, into the successive positions of buffer, which is reinterpreted as an array of unsigned char. The file position indicator for the stream is advanced by the number of characters read.
+//
+// If an error occurs, the resulting value of the file position indicator for the stream is indeterminate. If a partial element is read, its value is indeterminate.
+// Parameters
+// buffer   -   pointer to the array where the read objects are stored
+// size     -   size of each object in bytes
+// count    -   the number of the objects to be read
+// stream   -   the stream to read
+// Return value
+//
+// Number of objects read successfully, which may be less than count if an error or end-of-file condition occurs.
+//
+// If size or count is zero, fread returns zero and performs no other action.
+//
+// fread does not distinguish between end-of-file and error, and callers must use feof and ferror to determine which occurred. 
+
 
 
 

@@ -1,14 +1,10 @@
 #define _POSIX_C_SOURCE 200809L
 #include "logging.h" // self
-#include "my_utils.h" // utils
 #include <errno.h> // err
-#include <stdio.h> // basic io
-#include <stdbool.h> // bool
-#include <string.h> // mem op
 #include <stdarg.h> // va-arg
 
 /* local time */
-#if defined(_WIN32)
+#if defined(WIN)
 #  include <windows.h>
 #else
 #  include <unistd.h>
@@ -17,9 +13,6 @@
 #include <time.h> // time
 
 /* buffer size */
-#if !defined(KB)
-#  define KB 1024
-#endif
 
 #if defined(LOG_FILE)
 const char *log_file = LOG_FILE;
@@ -34,7 +27,7 @@ bool show_time = true;
 bool use_file = true;
 bool use_stderr = true;
 
-void log_set_global(log_lvl _lvl, bool _show_color, bool _show_color_file,
+void log_setglobal(log_lvl _lvl, bool _show_color, bool _show_color_file,
         bool _show_time, bool _use_file, bool _use_stderr) {
     log_level_global = _lvl;
     show_color_file = _show_color_file;
@@ -52,37 +45,40 @@ void log_setlvl(log_lvl _lvl) {
 int log_main(void) {
 #if !defined(LOG_FILE)
     const char *file = "/latest.log";
-    char *tmp = temp_dir();
-    size_t tmp_l = strlen(tmp),
-        file_l = strlen(file);
-    log_file = (char*)malloc(sizeof(char) * (tmp_l + file_l + 1));
-    if (!log_file) {
+    const char *tmp = temp_dir();
+    size_t tmp_l = strlen(tmp), file_l = strlen(file);
+    char *path = (char*)malloc(tmp_l + file_l + 1);
+    if (!path) {
         perror("malloc logfile");
         return 1;
     }
-    memcpy(log_file, tmp, tmp_l);
-    free(tmp);
-    memcpy(log_file + tmp_l, file, file_l + 1);
+    memcpy(path, tmp, tmp_l);
+    memcpy(path + tmp_l, file, file_l + 1);
+    log_file = path;
 #endif
     log_clear();
-    LOG_WARN("hello world");
-    LOG_DEBUG("stuff");
-    LOG_DEBUG("some more");
-    log_line(ERROR, "big bad");
+    log_warn("hello world");
+    log_debug("stuff");
+    log_debug("some more");
+    log_error_f("big bad");
     log_setlvl(WARN);
-    LOG_DEBUG("sme hidden");
-    LOG_WARN("Important, %s", "trace : NONE");
-    LOG_ERROR("some more");
-    LOG_ERROR("Fatal %d", 69);
+    log_debug("sme hidden");
+    log_warn("Important, %s", "trace : NONE");
+    log_error("some more");
+    log_error("Fatal %d", 69);
+    log_setlvl(DEBUG);
 
 #if !defined(LOG_FILE)
-    free(log_file);
+    char *p = log_file;
+    log_file = NULL;    // logger must not touch it while/after it is freed
+    free(p);
 #endif
 
     return 0;
 }
 
 void log_clear(void) {
+    if (!log_file) return;
     FILE *log_f = fopen(log_file, "w"); // write, creat if non exist, clear if it does
     if (!log_f) {
         perror("log file");
@@ -92,25 +88,25 @@ void log_clear(void) {
 }
 
 
-const char *loglvl_col(log_lvl lvl) {
+const char *log_lvlcol(log_lvl lvl) {
     switch (lvl) {
         case TRACE: return "\033[32m";
         case DEBUG: return "\033[34m";
         case INFO: return "\033[37m";
         case WARN: return "\033[33m";
         case ERROR: return "\033[31m";
+        default: return "\033[0m";
     }
-    return "";
 }
-const char *loglvl_str(log_lvl lvl) {
+const char *log_lvlstr(log_lvl lvl) {
     switch (lvl) {
         case TRACE: return "TRACE";
         case DEBUG: return "DEBUG";
         case INFO: return "INFO";
         case WARN: return "WARN";
         case ERROR: return "ERROR";
+        default: return "UNKNOWN";
     }
-    return "UNKNOWN";
 }
 
 void log_line(log_lvl lvl, const char *msg) {
@@ -124,7 +120,7 @@ void log_line(log_lvl lvl, const char *msg) {
     size_t len = 0;
     bool endN = true; // ends with new line
     if (msg && (len = strlen(msg)) > 0)
-        endN = msg[len-1] == '\n';
+        endN = msg[len-1] == '\n'; // only set if there is a msg
 
     if (use_stderr) { // to stderr
         FILE *out = stderr;
@@ -133,28 +129,25 @@ void log_line(log_lvl lvl, const char *msg) {
             fputc(' ', out);
         }
         if (show_color)
-            fputs(loglvl_col(lvl), out);
+            fputs(log_lvlcol(lvl), out);
 
-        fputs(loglvl_str(lvl), out);
+        fputs(log_lvlstr(lvl), out);
         fputs(": ", out);
 
-        if (len > 0) {
+        if (len > 0)
             fputs(msg, out);
-            if (!endN)
-                fputc('\n', out);
-        }
-
         if (show_color)
-            fputs("\033[0m", out);
+            fputs(log_lvlcol((log_lvl)NULL), out);
+        if (!msg || !endN)
+            fputc('\n', out);
 
-        if (fflush(out) != 0)
+        if (fflush(out) != 0) // flush, since we used fputs+fputc
             perror("log flush");
     }
     if (use_file && log_file) {
         FILE *out = fopen(log_file, "a"); // append, creat if non exist
         if (!out) {
             perror("log file");
-            use_file = false; // since we probably will not be able to make a log file there
             return;
         }
 
@@ -163,19 +156,17 @@ void log_line(log_lvl lvl, const char *msg) {
             fputc(' ', out);
         }
         if (show_color_file)
-            fputs(loglvl_col(lvl), out);
+            fputs(log_lvlcol(lvl), out);
 
-        fputs(loglvl_str(lvl), out);
+        fputs(log_lvlstr(lvl), out);
         fputs(": ", out);
 
-        if (len > 0) {
+        if (len > 0)
             fputs(msg, out);
-            if (!endN)
-                fputc('\n', out);
-        }
-
         if (show_color_file)
-            fputs("\033[0m", out);
+            fputs(log_lvlcol((log_lvl)NULL), out);
+        if (!msg || !endN)
+            fputc('\n', out);
 
         if (fclose(out) != 0) // no need to flush, close flushes for us
             perror("log file write");
@@ -184,11 +175,14 @@ void log_line(log_lvl lvl, const char *msg) {
 
 void log_msg(log_lvl lvl, const char *file, int line, const char *fmt, ...) {
     char buf[KB]; // KB of buffer, if more needed ... BRUH
+    int written = 0;
 
     // First format the file and line part
-    int written = snprintf(buf, sizeof(buf), "%s : line:%d ; ", file, line);
-    if (written < 0 || (size_t)written >= sizeof(buf)) {
-        return; // Buffer too small
+    if (file) {
+        written = snprintf(buf, sizeof(buf), "%s : line:%d ; ", file, line);
+        if (written < 0 || (size_t)written >= sizeof(buf)) {
+            return; // Buffer too small
+        }
     }
 
     // Then append the formatted message using va_args
@@ -204,7 +198,7 @@ void log_msg(log_lvl lvl, const char *file, int line, const char *fmt, ...) {
 char *time_now(char *buf, size_t n) {
     time_t sec; long ms; struct tm tm;
 
-#if defined(_WIN32) // WIN version
+#if defined(WIN) // WIN version
     FILETIME ft; // imagine still using only 32 bits ...
     GetSystemTimeAsFileTime(&ft);
     ULL t100 =                       /* 100 ns ticks since 1601 */
@@ -216,9 +210,9 @@ char *time_now(char *buf, size_t n) {
     ms  = (long)(ms_total % 1000ULL);
 
 #  if defined(_MSC_VER)
-        localtime_s(&tm, &sec);          /* (tm*, time_t*) */
+        localtime_s(&tm, &sec);      /* (tm*, time_t*) */
 #  else
-        localtime_r(&sec, &tm);          /* MinGW */
+        localtime_r(&sec, &tm);      /* MinGW */
 #  endif
 
 #else // POSIX version
