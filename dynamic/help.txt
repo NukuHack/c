@@ -1,0 +1,9 @@
+main compile :
+cc -shared -fPIC -o lib.so lib.c
+cc -o host.out main.c -ldl
+./host.out 
+
+
+to change internals at any time :
+cc -shared -fPIC -o lib.so lib.c
+

@@ -4,4 +4,6 @@ include/
 build/
 *.log
 *.out
+*.so
+*.dll
 *exe
