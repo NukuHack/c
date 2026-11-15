@@ -3,4 +3,5 @@ include/
 // executables
 build/
 *.log
+*.out
 *exe
