@@ -6,69 +6,45 @@
 // used for char, allows stuff that returns true
 typedef int (predicate)(int);
 
-/* input result */
-typedef enum {
-    INPUT_OK = 0,      /* value read; \n / \r / EOF ended it */
-    INPUT_EOF,         /* EOF before anything */
-    INPUT_EMPTY,       /* first char was \n or \r (consumed) */
-    INPUT_NAN,         /* first char not part of the number (pushed back) */
-    INPUT_OVERFLOW,    /* doesn't fit in the target type */
-    INPUT_STOPPED,     /* parsed a value; stopped at a non-closing char */
-    INPUT_RANGE,       /* outside [min, max] */
-    INPUT_SEP,         /* input_sep: expected char not found */
-    INPUT_IOERR        /* error on the input/output not "EOF" */
-} inp_res;
-
-const char *input_status_str(inp_res s);
-bool input_rejected(inp_res s);
-bool input_drain_required(inp_res s);
-
-/* low-level FILE parsers */
-inp_res input_int(FILE *in, FILE *out, int *v, int min, int max, const char *prompt);
-inp_res input_uint(FILE *in, FILE *out, uint *v, uint min, uint max, const char *prompt);
-inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, const char *prompt);
-void input_char(FILE *in, FILE *out, char *v, predicate *filter, const char *prompt);
-void input_string(FILE *in, FILE *out, char **buf, size_t len, const char *prompt);
-
-/* basic file op */
-ptrdiff_t fgetline(char **lineptr, size_t *n, FILE *in);
-ptrdiff_t fgetfile(char **bufptr, size_t *n, FILE *in);
-ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN); // to skip Newlines or not
-
-/* Consume exactly `expected`; otherwise leave the char in the stream. */
-inp_res input_sep(FILE *in, int expected);
-
-/* Throw away the rest of the current line. */
-void drain_line(FILE *in, FILE *out);
+/*
+ * Reads one line from "FILE *in", including the trailing "new-line" if present.
+ * The buffer pointed to by "*bufptr" is allocated/reallocated as needed and is
+ * always "\0"-terminated on success.
+ *
+ * On success : returns number of bytes read (excluding the "\0").
+ * On (1) EOF : returns -1 with no data consumed; errno unchanged.
+ *   - if we have have "bool stop-newline" false, ofc we get EOF ...
+ * On error   : returns -1 and sets errno.
+ *
+ * The caller owns "*bufptr" and must free() it (possible "NULL").
+ * "*bufptr" must be "NULL", or a pointer from malloc/realloc (with (atleast) *n size).
+ * If it is stack allocated resize is "Undefined" best case is crash.
+ *   - use "fgetstack" for that
+ */
+ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN);
+ptrdiff_t fgetstack(char **bufptr, size_t *n, FILE *in);
 
 /* "high-level" input functins */
 // the default behaviour of these wrappers are just to get a single thing from stdin output to stdout if incorrect
 // and re-try; make sure "EOF" is only retried for streams that support it, and will not just loop forever
 
-char inp_char(void);
-char* inp_str(void);
-int inp_int(void);
-uint inp_uint(void);
-double inp_double(void);
+int inpi(void);
+uint inpu(void);
+double inpd(void);
+char inpc(void);
+char* inps(void);
 
-int inp_int_s(const char* text, int min, int max);
-uint inp_uint_s(const char* text, uint min, uint max);
-double inp_double_s(const char* text, double min, double max);
-char inp_char_s(const char* text, predicate *filter);
-char* inp_str_s(const char* text);
+int inpi_s(const char* text, int min, int max);
+uint inpu_s(const char* text, uint min, uint max);
+double inpd_s(const char* text, double min, double max);
+char inpc_s(const char* text, predicate *filter);
+char* inps_s(const char* text);
 /* read to buff, like fgets, return buffptr if success, "NULL" otherwise */
 char *read_str(const char *msg, char* buf, size_t bufs);
 
-/* Backards cmpatiblity ... MY dearest */
-
 // parse from string, return the consumed chars
-int parse_int(const char* text, int* num);
-int parse_double(const char* text, double* num);
-int parse_uint(const char* text, uint* num);
-// "bounded" parsers
-int parse_int_b(const char* text, int* num, int min, int max);
-int parse_double_b(const char* text, double* num, double min, double max);
-int parse_uint_b(const char* text, uint* num, uint min, uint max);
-
+int parse_i(const char* text, int* num);
+int parse_d(const char* text, double* num);
+int parse_u(const char* text, uint* num);
 #endif /* INPUT_H */
 

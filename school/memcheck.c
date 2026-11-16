@@ -114,7 +114,7 @@ void *realloc_custom(void *ptr, size_t s) {
     void *saved;
     memcpy(&saved, &ptr, sizeof(void*)); // so gcc not complains about a "use after fee"
     void *pptr = (void*)realloc(ptr, s);
-    char numS[20]; fmt_num((LLU)s, ARR_L(num));
+    char numS[20]; fmt_num((LLU)s, ARR_L(numS));
     if (!pptr) {
         log_error("realloc: could not realloc %p (%s) to (%s)\n", saved, num, numS);
         if (saved) {

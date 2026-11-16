@@ -17,43 +17,8 @@
 #include <string.h> // batch mem op
 
 #if !defined(BUF_LEN)
-#   if BUFSIZ < 1024
-#     define BUF_LEN 1024
-#   else
-#     define BUF_LEN BUFSIZ
-#   endif
+#     define BUF_LEN 128
 #endif /* BUF_LEN */
-
-#if defined(MY_MEMCHECK)
-#  undef MY_MEMCHECK
-#  include "memcheck.h"
-#endif
-
-#if defined(MY_LOGGING)
-#  if   MY_LOGGING == 0
-#    define LOGGING 0
-#  elif MY_LOGGING == 1
-#    define LOGGING 1
-#  elif MY_LOGGING == 2
-#    define LOGGING 2
-#  elif MY_LOGGING == 3
-#    define LOGGING 3
-#  elif MY_LOGGING == 4
-#    define LOGGING 4
-#  elif MY_LOGGING == 5
-#    define LOGGING 5
-#  elif MY_LOGGING == 6
-#    define LOGGING 6
-#  elif MY_LOGGING == 7
-#    define LOGGING 7
-#  elif MY_LOGGING == 8
-#    define LOGGING 8
-#  elif MY_LOGGING == 9
-#    define LOGGING 9
-#  endif
-#  undef MY_LOGGING
-#  include "logging.h"
-#endif
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
 #  if !defined(WIN)
@@ -63,8 +28,12 @@
 
 #if !defined(ARR_L) && !defined(ARR_S)
 #  define ARR_L(x) x, ARR_S(x)
-#  define ARR_S(x) sizeof(x)/sizeof(x[0])
+#  define ARR_S(x) ((sizeof(x))/(sizeof(x[0])))
 #endif /* ARR_L and ARR_S */
+
+#if !defined(CLAMP)
+#  define CLAMP(a, b, ty) (ty)MIN((a),(b)) // clamp a to b, return min, in type ty
+#endif
 
 #if !defined(MIN) && !defined(MAX) && !defined(ABS)
 #  define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -98,21 +67,6 @@ extern const char *const units[];
 #  define QB RB * KB // qettabyte  2**100
 #endif
 
-#if !defined(WARN_UNUSED_RESULT)
-#  if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
-     /* C23 */
-#    define WARN_UNUSED_RESULT [[nodiscard]]
-#  elif defined(__GNUC__) || defined(__clang__)
-     /* GCC, Clang, and GCC-compatible compilers */
-#    define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
-#  elif defined(_MSC_VER)
-#    include <sal.h>
-#    define WARN_UNUSED_RESULT _Check_return_
-#  else
-     /* Unknown compiler: :O */
-#    define WARN_UNUSED_RESULT
-#  endif
-#endif
 
 /* swap the data of 2 pointers */
 void mem_swap(void *a, void *b, size_t size);
@@ -141,6 +95,8 @@ void err(const char* str);
 void slep(double millis);
 // temp dir, caller has to free it
 const char *temp_dir(void);
+/* small check */
+bool check_file_exist(const char *name);
 
 // compare, ++ = a bigger, -- = b bigger, 0 = equal
 int cmp(int a, int b);
@@ -152,13 +108,43 @@ int *cmpp(int *a, int *b);
 int rand_int(int min, int max);
 // randm double (float) , 0-1
 double rand_double(void);
-
-
-/* FILE stuff */
-bool check_file_exist(const char *name);
-
 /* ---- CPU time ---- */
 double bench_cpu_now(void);
+
+
+
+#if defined(MY_MEMCHECK)
+#  undef MY_MEMCHECK
+#  include "memcheck.h"
+#endif
+
+#if ZERO
+// this does not work
+#  define LOGGING MY_LOGGING
+#  undef MY_LOGGING
+// this makes LOGGING defined to MY_LOGGING
+// what does NOT exist at the time we need LOGGING
+// so yeah -- "bad switch case" :
+#elif defined(MY_LOGGING)
+#  if   MY_LOGGING == 0
+#    define LOGGING 0
+#  elif MY_LOGGING == 1
+#    define LOGGING 1
+#  elif MY_LOGGING == 2
+#    define LOGGING 2
+#  elif MY_LOGGING == 3
+#    define LOGGING 3
+#  elif MY_LOGGING == 4
+#    define LOGGING 4
+#  elif MY_LOGGING == 5
+#    define LOGGING 5
+#  elif MY_LOGGING == 6
+#    define LOGGING 6
+#  endif
+#  undef MY_LOGGING
+#  include "logging.h"
+#endif
+
 
 #endif /* MY_UTILS */
 

@@ -1,6 +1,7 @@
 #include "input.h" // self
 #include "my_utils.h" // basic io
 #include <limits.h> // limit for overflow checking
+#include <stdint.h> //  - || -
 #include <math.h> // double stuff for overflow & NAN
 #include <errno.h> // error checking mainly "EOF" and "errno" at builtin stuff
 #include <ctype.h> // basic char methods
@@ -10,17 +11,17 @@
 #define EOF_RETRY "closed input, but retry\n"
 
 int input_main(void) {
-    int size = inp_int_s("inp number [0,10]: ", 0, 10);
+    int size = inpi_s("inp number [0,10]: ", 0, 10);
     printf("got: %d\n", size);
 
-    char* str = inp_str();
+    char* str = inps();
     print(str);
     destroy(str);
 
-    char c = inp_char();
+    char c = inpc();
     printf("got char : %c\n", c);
 
-    double d = inp_double();
+    double d = inpd();
     printf("double: %.3lf\n", d);
 
     print("10 random double:");
@@ -38,162 +39,160 @@ void consume_crlf_tail(FILE *in) {
     if (c == EOF) return;
     if (c != '\n') ungetc(c, in);
 }
-
-
-void new_line(FILE *out) {
+void handle_eof(FILE *in, FILE *out) {
+    clearerr(in);
     if (!out) return;
     fputc('\n', out);
     fflush(out);
 }
+void drain_line(FILE *in, FILE *out) {
+    int c;
+    while ((c = fgetc(in)) != '\n' && c != '\r' && c != EOF);
 
-void handle_eof(FILE *in, FILE *out) {
-    clearerr(in);
-    new_line(out);
-}
+    if (c == '\r' && (c = fgetc(in)) != '\n' && c != EOF)
+        ungetc(c, in);
 
-
-// make it not prtint error, and move re-try outside
-// TODO : make it return "inp_res"
-void input_char(FILE *in, FILE *out, char *v, predicate *filter, const char *prompt) {
-#define retry_text "input a char (char)\n"
-#define not_allow "wrong char [not allowed]\n"
-    int c, ch;
-read:
-    if (prompt && out) { fputs(prompt, out); fflush(out); }
-
-    ch = fgetc(in);
-    if (ch == EOF) {
+    /* we ran out of input before any line terminator -> the user's
+       cursor is still sitting at the end of the current line, so
+       emit one ourselves to keep prompts/errors on their own line */
+    if (c == EOF) {
         handle_eof(in, out);
-        fprintf(out, EOF_RETRY);
-        goto read;
     }
-
-    if (ch == '\n' || ch == '\r') {
-        if (ch == '\r') consume_crlf_tail(in);
-        fprintf(out, retry_text);
-        goto read;
-    }
-
-    c = fgetc(in);
-    if (c == '\r') {
-        consume_crlf_tail(in);
-        c = '\n';
-    }
-
-    if (c != '\n' && c != EOF) { // EOF case
-        drain_line(in, out);
-        fprintf(out, retry_text);
-        goto read;
-    }
-
-    if (filter && !filter(ch)) {
-        fprintf(out, not_allow);
-        goto read;
-    }
-
-    *v = (char)ch;
 }
-
-
-void input_string(FILE *in, FILE *out, char **buf, size_t len, const char *prompt) {
-    if (prompt && out) {
-        fputs(prompt, out);
-        fflush(out);
-    }
-    if (!in || !len || !buf)
-        return;
-
-    ptrdiff_t l;
-    l = fgetline(buf, &len, in);
-    if (l == EOF && feof(in)) {
-        handle_eof(in, out);
-    } else if (l == -1 && ferror(in)) {
-        fprintf(out, "BIG ERROR\n");
-    } else if (l == -1) {
-        fprintf(out, "failed\n");
-    }
-    return;
+void trim_n(char *buf, size_t *bufs) {
+    size_t l = *bufs;
+    while(l > 0 && ((buf)[l - 1] == '\n' || (buf)[l - 1] == '\r'))
+        buf[--l] = '\0';
+    *bufs = l;
 }
 
 
 
-/*
- * Reads one line from `FILE *in` (any length), including the trailing "new-line" if present.
- * The buffer pointed to by `*bufptr` is allocated/reallocated as needed and is
- * always "\0"-terminated on success.
- *
- * On success : returns number of bytes read (excluding the "\0").
- * On EOF     : returns -1 with no data consumed; errno unchanged.
- * On error   : returns -1 and sets errno (EINVAL / ENOMEM / whatever fgetc set).
- *
- * The caller owns `*bufptr` and must free() it (possible "NULL").
- * *bufptr must be "NULL", or a pointer from malloc/realloc (with *n its size).
- * If it is stack allocated resize is "Undefined" best case is crash.
- */
-ptrdiff_t fgetline(char **bufptr, size_t *n, FILE *in) {
-    ptrdiff_t r = fgetbatch(bufptr, n, in, true);
-    return r;
+// returns true if succcess
+// returns false (+ errno) if fails
+bool resize_buffer(char **bufptr, size_t *n) {
+    if (*n > (size_t)-1 / 2) {
+        errno = ENOMEM;
+        return false;
+    }
+    size_t new_size = *n ? *n * 2 : BUF_LEN;
+    char *p = (char*)realloc(*bufptr, new_size);
+    if (!p) {
+        errno = ENOMEM;
+        return false;
+    }
+    *bufptr = p;
+    *n = new_size;
+    return true;
 }
-ptrdiff_t fgetfile(char **bufptr, size_t *n, FILE *in) {
-    ptrdiff_t r = fgetbatch(bufptr, n, in, false);
-    return r;
+
+
+// basic wrapper for fgets
+ptrdiff_t fgetstack(char **bufptr, size_t *n, FILE *in) {
+    // no need for complex logic, since who would allocate memory on stack for an Entire file ...
+    // ... me
+    if (!bufptr || !n || !in || !*bufptr || *n < 2) {
+        /* need room for ≥1 char + NUL */
+        errno = EINVAL;
+        return -1;
+    }
+    /* fgets takes int; clamp so huge buffers don't overflow. */
+    int chunk = CLAMP(*n, (size_t)INT_MAX, int);
+
+    if (!fgets(*bufptr, chunk, in))
+        return ferror(in) ? -1 : 0; /* distinguish error from EOF */
+    size_t len = strlen(*bufptr);
+
+    if (len == 0 && ferror(in))
+        return -1;
+
+    /* (*bufptr)[len] is already '\0' - by fgets */
+    if (len > (size_t)PTRDIFF_MAX) {
+        errno = EOVERFLOW;
+        return -1;
+    }
+    return (ptrdiff_t)len;
 }
 ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     if (!bufptr || !n || !in) {
         errno = EINVAL;
-        return -1;
+        return -1; // wrong args
     }
-    if (!*bufptr) *n = 0;
+    // we can use the same "realloc - resize", realloc "NULL" is just a malloc
+    if (!*bufptr && !resize_buffer(bufptr, n))
+        return -1; // malloc failed 
 
     size_t len = 0;
 #if defined(DYN_STR)
-    int c;
-    while ((c = fgetc(in)) != EOF) {
-        /* need room for this char + the NUL terminator */
-        if (len + 1 >= *n) {
-            if (*n == 0) { /* if size is 0 */
-                *n = BUF_LEN >> 1; /* half size */
-            } else if (*n > (size_t)-1 / 2) { /* overflow guard */
-                ungetc(c, in); /* restore consumed char */
-                errno = ENOMEM;
-                return -1;
-            }
-            size_t new_size = *n * 2;
-            char *p = (char*)realloc(*bufptr, new_size);
-            if (p == NULL) {
-                ungetc(c, in); /* restore consumed char */
-                errno = ENOMEM;
-                return -1; /* ENOMEM, *lineptr intact */
-            }
-            *bufptr = p;
-            *n = new_size;
-        }
-        (*bufptr)[len++] = (char)c;
-        if (c == '\n' && stpN) break; /* end of line */
-    }
-#elif ZERO // this would be nice, but needs even more work to handle \n in the middle
-    if (!b || *n <= 1) return 0;
-    size_t read;
-    while ((read = fread(*bufptr + len, sizeof(char), (*n - len) - 1, in)) != 0) {
-        len += read;
-    }
-#else /* basic wrapper of fgets */
-    char *b = *bufptr; // still ptr, so points to same val
-    if (!b || *n <= 1) return 0;
-    if (!fgets(b, (int)*n, in)) return -1;
-    len = strlen(b);
-#endif
+    // simplest version : dynamic mem alloc - handles null input 
+    // char-by-char so any extension / refinement is easy to do 
+    // os-independent, nothing like "getline" what only works "here and there" 
+    while (1) {
+        /* need room for next char + the NUL terminator */
+        if (*n - len < 2 && !resize_buffer(bufptr, n))
+            return -1; // realloc failed
 
-    if (ferror(in)) {
-        /* File error */
+        int c = fgetc(in);
+        if (c == EOF)
+          break; /* EOF or error */
+
+        (*bufptr)[len++] = (char)c;
+        if (c == '\n' && stpN)
+            break; /* end of line */
+    }
+    goto ending;
+#else // this is dynamic alloc too, moved static stuff to "stack" method, since no mem resize
+    if (!stpN) {
+        while (1) {
+            if (*n - len < 2 && !resize_buffer(bufptr, n))
+                return -1; // realloc failed
+
+            /* -1 reserves the NUL slot. fread never writes past it. */
+            size_t got = fread(*bufptr + len, 1, *n - len - 1, in);
+            if (got == 0)
+                break; /* EOF or error */
+            len += got;
+        }
+        goto ending;
+    }
+    // fread is bad, since it does not stop at \n
+    // so it's easier to just use fgets() since it stops at EOF and newline nicely
+    while (1) {
+        /* Room for at least 1 char + NUL. */
+        if (*n - len < 2 && !resize_buffer(bufptr, n))
+            return -1; // realloc failed
+
+        size_t avail = *n - len;    /* room including NUL */
+        int chunk = (avail > (size_t)INT_MAX) ? INT_MAX : (int)avail;
+
+        if (!fgets(*bufptr + len, chunk, in))
+            break; /* EOF or error */
+
+        /* fgets guarantees a NUL; memchr is bounded, unlike strlen, so no segfault. */
+        char *nul = memchr(*bufptr + len, '\0', (size_t)chunk);
+        size_t written = (size_t)(nul - (*bufptr + len));
+        len += written;
+
+        if (written > 0 && (*bufptr)[len - 1] == '\n')
+            break; /* got the line */
+    }
+    goto ending;
+#endif
+ending:;;
+
+    /* important by all means, should not remove !! */
+    (*bufptr)[len] = '\0';
+
+    /* Not eof, but error */
+    // maybe simply just ferror(in) would be fine, but then we would lose the partial input
+    if (len == 0 && ferror(in))
+        return -1;
+
+    if (len > (size_t)PTRDIFF_MAX) {
+        /*  *sher sound* "like that's ever gonna happen" */
+        errno = EOVERFLOW;
         return -1;
     }
-    if (len == 0) {
-        /* Nothing read: EOF (feof) */
-        return (ptrdiff_t)EOF;
-    }
-
-    (*bufptr)[len] = '\0';
     return (ptrdiff_t)len;
 }
 
@@ -201,36 +200,35 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
 // high level inputs have a min-max of 10K, reason being ... nothing
 // usually we take in that kind of numbers, if a number is over 10k the caller should be explicit
 
-int inp_int(void) {
-    return inp_int_s("input an int: ", -10000, 10000);
+int inpi(void) {
+    return inpi_s("input an int: ", -10000, 10000);
 }
-uint inp_uint(void) {
-    return inp_uint_s("input an unsigned: ", 0, 10000);
+uint inpu(void) {
+    return inpu_s("input an unsigned: ", 0, 10000);
 }
-double inp_double(void) {
-    return inp_double_s("input a double: ", -10000, 10000);
+double inpd(void) {
+    return inpd_s("input a double: ", -10000, 10000);
 }
-char inp_char(void) {
-    return inp_char_s("input an alphabetic char: ", (predicate*)isalpha);
+char inpc(void) {
+    return inpc_s("input an alphabetic char: ", (predicate*)isalpha);
 }
-char* inp_str(void) {
-    return inp_str_s("input a line: \n");
+char* inps(void) {
+    return inps_s("input a line: \n");
 }
 
 /* re-try inputs and easy use */
 
-int inp_int_s(const char* text, int min, int max) {
+int inpi_s(const char* prompt, int min, int max) {
     if (min > max) { int t = min; min = max; max = t; }
 
-    int val, ret;
+    int val, ret; int con;
+    char buf[BUF_LEN];
 read:;
-    if (text) {
-        fputs(text, stdout);
-        fflush(stdout);
-    }
-    ret = scanf("%d ", &val);
+    if (!read_str(prompt, ARR_L(buf)))
+        goto read;
+    ret = sscanf(buf, "%d %n", &val, &con);
     if (ret == 1) {
-        if (val >= min && val <= max)
+        if (buf[con] == '\0' && val >= min && val <= max)
             return val;
         else
             printf("input a number in [%d,%d]\n", min, max);
@@ -240,18 +238,17 @@ read:;
     goto read;
 }
 
-uint inp_uint_s(const char* text, uint min, uint max) {
+uint inpu_s(const char* prompt, uint min, uint max) {
     if (min > max) { uint t = min; min = max; max = t; }
 
-    uint val; int ret;
+    uint val; int ret; int con;
+    char buf[BUF_LEN];
 read:;
-    if (text) {
-        fputs(text, stdout);
-        fflush(stdout);
-    }
-    ret = scanf("%u ", &val);
+    if (!read_str(prompt, ARR_L(buf)))
+        goto read;
+    ret = sscanf(buf, "%u %n", &val, &con);
     if (ret == 1) {
-        if (val >= min && val <= max)
+        if (buf[con] == '\0' && val >= min && val <= max)
             return val;
         else
             printf("input a number in [%u,%u]\n", min, max);
@@ -261,18 +258,17 @@ read:;
     goto read;
 }
 
-double inp_double_s(const char* text, double min, double max) {
+double inpd_s(const char* prompt, double min, double max) {
     if (min > max) { double t = min; min = max; max = t; }
 
-    double val; int ret;
+    double val; int ret; int con;
+    char buf[BUF_LEN];
 read:;
-    if (text) {
-        fputs(text, stdout);
-        fflush(stdout);
-    }
-    ret = scanf("%lf ", &val);
+    if (!read_str(prompt, ARR_L(buf)))
+        goto read;
+    ret = sscanf(buf, "%lf %n", &val, &con);
     if (ret == 1) {
-        if (isfinite(val) && val >= min && val <= max)
+        if (buf[con] == '\0' && isfinite(val) && val >= min && val <= max)
             return val;
         else
             printf("input a number in [%f,%f]\n", min, max);
@@ -282,21 +278,80 @@ read:;
     goto read;
 }
 
-char inp_char_s(const char* text, predicate *filter) {
-    char c;
-    input_char(stdin, stdout, &c, filter, text);
-    return c;
+char inpc_s(const char* prompt, predicate *filter) {
+
+    char val; int ret; int con;
+    char buf[BUF_LEN];
+read:;
+    if (!read_str(prompt, ARR_L(buf)))
+        goto read;
+    ret = sscanf(buf, "%1s %n", &val, &con);
+    if (ret == 1) {
+        if (buf[con] == '\0' && filter && filter(val))
+            return val;
+        else
+            printf("wrong char [not allowed]\n");
+    } else {
+        printf(EOF_RETRY);
+    }
+    goto read;
 }
-char *inp_str_s(const char *text) {
+
+char *inps_s(const char *prompt) {
     char *buf = (char*)malloc(BUF_LEN);
-    if (!buf) // fail
+    size_t bufs = BUF_LEN;
+    if (bufs <= 1 || !buf)
         return NULL;
-    input_string(stdin, stdout, &buf, BUF_LEN, text);
+    if (prompt) {
+        fputs(prompt, stdout);
+        fflush(stdout);
+    }
+
+    ptrdiff_t l = fgetbatch(&buf, &bufs, stdin, true);
+    if (feof(stdin)) {
+        handle_eof(stdin, stdout);
+    } else if (ferror(stdin)) {
+        handle_eof(stdin, stdout);
+        fprintf(stdout, "BIG ERROR err:%d\n", errno);
+        goto ending;
+    } else if (l == -1) {
+        fprintf(stdout, "failed err:%d\n", errno);
+        goto ending;
+    }
+    trim_n(buf, (size_t*)&l);
     return buf;
+
+ending:;;
+    free(buf);
+    return NULL;
 }
-char *read_str(const char *msg, char *buf, size_t bufs) {
-    input_string(stdin, stdout, &buf, bufs, msg);
+char *read_str(const char *prompt, char *buf, size_t bufs) {
+    if (bufs <= 1 || !buf)
+        return NULL;
+    if (prompt) {
+        fputs(prompt, stdout);
+        fflush(stdout);
+    }
+
+    ptrdiff_t l = fgetstack(&buf, &bufs, stdin);
+    if (!feof(stdin) && l > 0 && (buf)[l - 1] != '\n') {
+        drain_line(stdin, NULL); // consume the rest of the line
+    }
+    if (feof(stdin)) {
+        handle_eof(stdin, stdout);
+    } else if (ferror(stdin)) {
+        handle_eof(stdin, stdout);
+        fprintf(stdout, "BIG ERROR err:%d\n", errno);
+        goto ending;
+    } else if (l == -1) {
+        fprintf(stdout, "failed err:%d\n", errno);
+        goto ending;
+    }
+    trim_n(buf, (size_t*)&l);
     return buf;
+
+ending:;;
+    return NULL;
 }
 
 
@@ -326,7 +381,7 @@ size_t fwrite(const void* buffer, size_t size, size_t count, FILE* stream);
 /* parsers */
 // since they already have the string in memory going char-by-char is worse, so just use the standard
 // "strto_" methods to convert from string to numbers nicely
-int parse_int(const char *text, int *num) {
+int parse_i(const char *text, int *num) {
     if (!text || !num) return -1;
     char *endptr;
     errno = 0;
@@ -337,7 +392,7 @@ int parse_int(const char *text, int *num) {
     return (int)(endptr - text);
 }
 
-int parse_double(const char *text, double *num) {
+int parse_d(const char *text, double *num) {
     if (!text || !num) return -1;
     char *endptr;
     errno = 0;
@@ -348,10 +403,9 @@ int parse_double(const char *text, double *num) {
     return (int)(endptr - text);
 }
 
-int parse_uint(const char *text, uint *num) {
+int parse_u(const char *text, uint *num) {
     if (!text || !num) return -1;
-
-    // Reject negative numbers explicitly
+    // no negative
     const char *p = text;
     while (isspace((unsigned char)*p)) p++;
     if (*p == '-') return -1;
