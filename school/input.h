@@ -28,7 +28,7 @@ inp_res input_int(FILE *in, FILE *out, int *v, int min, int max, const char *pro
 inp_res input_uint(FILE *in, FILE *out, uint *v, uint min, uint max, const char *prompt);
 inp_res input_double(FILE *in, FILE *out, double *v, double min, double max, const char *prompt);
 void input_char(FILE *in, FILE *out, char *v, predicate *filter, const char *prompt);
-void input_string(FILE *in, FILE *out, char **buf, size_t len, bool dynamic, const char *prompt);
+void input_string(FILE *in, FILE *out, char **buf, size_t len, const char *prompt);
 
 /* basic file op */
 ptrdiff_t fgetline(char **lineptr, size_t *n, FILE *in);

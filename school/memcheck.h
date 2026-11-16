@@ -18,6 +18,9 @@ void *malloc_custom(size_t s);
 void *calloc_custom(size_t z, size_t s);
 void *realloc_custom(void *ptr, size_t s);
 
+/* format a number */
+char *fmt_num(LLU v, char *buf, size_t buflen);
+
 #define malloc malloc_custom
 #define free free_custom
 #define calloc calloc_custom

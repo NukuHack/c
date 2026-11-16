@@ -37,6 +37,17 @@
 #endif
 
 /* ---------------------------------------------------------------------------
+ * Platform layer: sleep
+ * ------------------------------------------------------------------------- */
+static void do_sleep(int seconds) {
+#ifdef _WIN32
+    Sleep((DWORD)(seconds * 1000));
+#else
+    sleep((unsigned int)seconds);
+#endif
+}
+
+/* ---------------------------------------------------------------------------
  * Per-platform shared library name.
  *
  * POSIX dlopen() only searches LD_LIBRARY_PATH and the system dirs when the
@@ -56,18 +67,6 @@
 #endif
 
 typedef void (*hello_fn)(void);
-
-/* ---------------------------------------------------------------------------
- * Platform layer: sleep
- * ------------------------------------------------------------------------- */
-static void do_sleep(int seconds)
-{
-#ifdef _WIN32
-    Sleep((DWORD)(seconds * 1000));
-#else
-    sleep((unsigned int)seconds);
-#endif
-}
 
 /* ---------------------------------------------------------------------------
  * Platform layer: file fingerprint

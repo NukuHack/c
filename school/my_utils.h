@@ -126,8 +126,6 @@ int count_words(const char *str, const char *sep);
 void strrep(char *str, int len, char old, char upd);
 /* shift argv, argc and return the shifted out variable */
 char **shift_args(int *argc, char ***argv);
-/* format a number */
-char *fmt_num(LLU v, char *buf, size_t buflen);
 
 // print the string + \n
 void print(const char* str);

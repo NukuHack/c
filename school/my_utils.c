@@ -3,18 +3,17 @@
 #include <time.h> // time, random seeding
 #include <limits.h> // RAND_MAX
 
-// for sleep & terminal
+// for sleep & terminal clear
 #if defined(WIN)
 #  include <windows.h>
 #  include <conio.h>
 #else
 #  include <errno.h>
+#  include <sys/stat.h>
 #  include <unistd.h>
 #  include <termios.h>
 #  include <sys/ioctl.h>
 #endif
-
-const char *const units[] = {"B","KB","MB","GB","TB","PB","EB"};
 
 int my_main(int argc, char **argv) {
     do {
@@ -120,57 +119,6 @@ char **shift_args(int *argc, char ***argv) {
     return arg;
 }
 
-char *fmt_num(LLU v, char *buf, size_t buflen) {
-    int MAX_TIER = ARR_S(units)-1; /* index of the max */
-
-    if (!buf || buflen == 0)
-        return buf;
-    if (v < 1000ULL) {
-        snprintf(buf, buflen, "%llu B", v);
-        return buf;
-    }
-
-    /* 1. Find tier: d = 1000^tier, the largest power with v / d >= 1.
-     *    1000^6 = 1e18 fits in 64 bits, and v/1e18 <= 18, so the loop
-     *    can never run past EB. */
-    unsigned long long d = 1ULL;
-    int tier = 0;
-    while (tier < MAX_TIER && v / d >= 1000ULL) { d *= 1000ULL; ++tier; }
-
-    unsigned long long ip  = v / d;             /* integer part, 1..999 */
-    unsigned long long rem = v % d;             /* remainder, < d <= 1e18 */
-
-    /* 2. 5 significant digits total. */
-    int decimals = 5 - ((ip >= 100) ? 3 : (ip >= 10) ? 2 : 1);
-
-    /* 3. Exact long division for the fractional digits.
-     *    rem * 10 < 1e19 < 2^64, so it never overflows. */
-    unsigned frac = 0, pow10 = 1;
-    for (int i = 0; i < decimals; ++i) {
-        rem *= 10;
-        frac = frac * 10 + (unsigned)(rem / d);
-        rem %= d;
-        pow10 *= 10;
-    }
-
-    /* 4. Round half up on the exact remainder, then propagate carries. */
-    if (rem * 2 >= d && ++frac == pow10) {
-        frac = 0;
-        if (++ip == 1000ULL && tier < MAX_TIER) { ip = 1; ++tier; }
-    }
-
-    /* 5. Fraction digits, trailing zeros trimmed. */
-    char dig[4];
-    for (int i = decimals - 1; i >= 0; --i) { dig[i] = (char)('0' + frac % 10); frac /= 10; }
-    while (decimals > 0 && dig[decimals - 1] == '0') --decimals;
-
-    if (decimals)
-        snprintf(buf, buflen, "%llu.%.*s %s", ip, decimals, dig, units[tier]);
-    else
-        snprintf(buf, buflen, "%llu %s", ip, units[tier]);
-    return buf;
-}
-
 // ptr to first in alphab. ord.
 char *alphabetic(char *a, char *b) {
     int r = 0;
@@ -180,11 +128,12 @@ char *alphabetic(char *a, char *b) {
     return (r > 0) ? b : a;
 }
 
-// taken from `https://en.cppreference.com/c/string/byte/strpbrk`
 int count_words(const char *str, const char *sep) {
     int cnt = 0;
     if (!str || !*str) return 0;
-    if (*str == ' ') cnt--;
+    size_t initial = strspn(str, sep);
+    if (initial > 0)
+        str += initial; // if first char is a separator skip them
     do {
         str = strpbrk(str, sep); // find separator
           // string-span would only skip one char
@@ -193,7 +142,7 @@ int count_words(const char *str, const char *sep) {
         if(str) str += strspn(str, sep); // skip separator
         ++cnt; // increment word count
     } while(str && *str);
-    return cnt == -1 ? 0 : cnt;
+    return cnt;
 }
 
 void strrep(char *str, int len, char old, char upd) {
@@ -258,7 +207,7 @@ double bench_cpu_now(void) {
     if (c == (clock_t)-1)
         return -1.0;      /* clock() failure (rare) */
     /* Cast BEFORE division so 32-bit clock_t can't overflow during
-       intermediate math, and "CLOCKS_PER_SEC" of 1e3 or 1e6 both work. */
+       intermediate math, and "CLOCKS_PER_SEC" of "1K" or "1M" both work. */
     return (double)c / (double)CLOCKS_PER_SEC;
 }
 
