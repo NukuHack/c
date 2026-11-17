@@ -32,8 +32,7 @@ main_fn() {
             # cbuild list_main.c list.c my_utils.c $flag
             cbuild logging.c my_utils.c -m log_main $flag
             cbuild logging.c my_utils.c -m log_main $flag -DLOG_FILE=\"$log_file\" && rm -f $log_file
-            cbuild input.c my_utils.c -m input_main $flag
-            cbuild input.c my_utils.c -m input_main $flag -DDYN_STR
+            cbuild my_io.c my_utils.c -m input_main $flag
             ;;
         "-mem")
             flag="$manual_files -Xcc $base_flags $leaky $manual_flags"
@@ -42,8 +41,7 @@ main_fn() {
             # cbuild list_main.c list.c my_utils.c $flag
             cbuild logging.c my_utils.c -m log_main $flag
             cbuild logging.c my_utils.c -m log_main $flag -DLOG_FILE=\"$log_file\" && rm -f $log_file
-            cbuild input.c my_utils.c -m input_main $flag
-            cbuild input.c my_utils.c -m input_main $flag -DDYN_STR
+            cbuild my_io.c my_utils.c -m input_main $flag
             ;;
         "-f")
             echo "gcc <input-file> -o <output-exe>"

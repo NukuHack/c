@@ -8,7 +8,6 @@
 #  include <windows.h>
 #  include <conio.h>
 #else
-#  include <errno.h>
 #  include <sys/stat.h>
 #  include <unistd.h>
 #  include <termios.h>
@@ -68,12 +67,6 @@ void print(const char* str) {
     if (str) fputs(str, stdout);
     fputs("\n", stdout);
 }
-void printn(void) {
-    print(NULL);
-}
-void printi(int num) {
-    fprintf(stdout, "%d\n", num);
-}
 
 void err(const char* str) {
     if (str) fputs(str, stderr);
@@ -104,7 +97,7 @@ void slep(double millis) {
     struct timespec ts;
     ts.tv_sec  = (time_t)(millis / 1000.0);
     ts.tv_nsec = (long)((millis - (double)ts.tv_sec * 1000.0) * 1e6);
-    while (nanosleep(&ts, &ts) == -1 && errno == EINTR);
+    while (nanosleep(&ts, &ts) == -1);
 #endif
 }
 
@@ -153,28 +146,6 @@ void strrep(char *str, int len, char old, char upd) {
     }
 }
 
-#if ZERO
-// copied from `https://en.cppreference.com/c/string/byte/strtok`
-// decided not to use this, since it has "complex" internal state (atleast a ptr)
-// what is unreliable in concurrent or any "future" context
-int main(void)
-{
-    char input[] = "A bird came down the walk";
-    printf("Parsing the input string '%s'\n", input);
-    char* token = strtok(input, " ");
-    while (token)
-    {
-        puts(token);
-        token = strtok(NULL, " ");
-    }
-
-    printf("Contents of the input string now: '");
-    for (size_t n = 0; n < sizeof input; ++n)
-        input[n] ? putchar(input[n]) : fputs("\\0", stdout);
-    puts("'");
-}
-#endif
-
 /* just for testing */
 const char *temp_dir(void) {
 #if defined(WIN)
@@ -214,7 +185,6 @@ double bench_cpu_now(void) {
 /**
  * FILE stuff :
  * */
-
 
 bool check_file_exist(const char *name) {
     FILE *file = fopen(name, "r"); // read does not create

@@ -1,4 +1,4 @@
-#include "input.h" // self
+#include "my_io.h" // self
 #include "my_utils.h" // basic io
 #include <limits.h> // limit for overflow checking
 #include <stdint.h> //  - || -
@@ -6,8 +6,6 @@
 #include <errno.h> // error checking mainly "EOF" and "errno" at builtin stuff
 #include <ctype.h> // basic char methods
 
-#define IO stdin,stdout
-#define destroy(a) do { free(a);a=NULL; }while(0)
 #define EOF_RETRY "closed input, but retry\n"
 
 int input_main(void) {
@@ -90,9 +88,7 @@ bool resize_buffer(char **bufptr, size_t *n) {
 // basic wrapper for fgets
 ptrdiff_t fgetstack(char **bufptr, size_t *n, FILE *in) {
     // no need for complex logic, since who would allocate memory on stack for an Entire file ...
-    // ... me
-    if (!bufptr || !n || !in || !*bufptr || *n < 2) {
-        /* need room for ≥1 char + NUL */
+    if (!bufptr || !n || !in || !*bufptr || *n < 2) { /* need room for ≥1 char + NUL */
         errno = EINVAL;
         return -1;
     }
@@ -101,7 +97,13 @@ ptrdiff_t fgetstack(char **bufptr, size_t *n, FILE *in) {
 
     if (!fgets(*bufptr, chunk, in))
         return ferror(in) ? -1 : 0; /* distinguish error from EOF */
-    size_t len = strlen(*bufptr);
+
+    char *nul = memchr(*bufptr, '\0', *n);
+    if (!nul) {
+        errno = EOVERFLOW;
+        return -1;
+    }
+    size_t len = (size_t)(nul - *bufptr);
 
     if (len == 0 && ferror(in))
         return -1;
@@ -119,11 +121,11 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
         return -1; // wrong args
     }
     // we can use the same "realloc - resize", realloc "NULL" is just a malloc
-    if (!*bufptr && !resize_buffer(bufptr, n))
+    if ((!*bufptr || *n < 2) && !resize_buffer(bufptr, n))
         return -1; // malloc failed 
 
     size_t len = 0;
-#if defined(DYN_STR)
+#if !ZERO
     // simplest version : dynamic mem alloc - handles null input 
     // char-by-char so any extension / refinement is easy to do 
     // os-independent, nothing like "getline" what only works "here and there" 
@@ -196,9 +198,27 @@ ending:;;
     return (ptrdiff_t)len;
 }
 
+ptrdiff_t fputbatch(char **bufptr, size_t *n, FILE *out, bool stpN) {
+    if (!bufptr || !*bufptr || !n || *n == 0 || !out) {
+        return -1;
+    }
+    size_t write_len = *n * sizeof(char);
+    if (stpN) {
+        char *nl = memchr(*bufptr, '\n', *n); // Search for '\n'
+        if (nl != NULL) {
+            // Calculate length including '\n'
+            write_len = (size_t)((char *)nl - *bufptr) + 1;
+        }
+    }
 
-// high level inputs have a min-max of 10K, reason being ... nothing
-// usually we take in that kind of numbers, if a number is over 10k the caller should be explicit
+    size_t pr = fwrite(*bufptr, sizeof(char), write_len, out);
+    // "If an error occurs, the resulting value of the file position indicator for the stream is indeterminate."
+    // Return value :
+    // The number of objects written successfully, which will be less than count only if an error occurs.
+    // - so no need for loops an retry, since it's IO error
+    return CLAMP(pr, (size_t)PTRDIFF_MAX, ptrdiff_t);
+}
+
 
 int inpi(void) {
     return inpi_s("input an int: ", -10000, 10000);
@@ -354,26 +374,6 @@ ending:;;
     return NULL;
 }
 
-
-
-
-#if ZERO
-size_t fwrite(const void* buffer, size_t size, size_t count, FILE* stream);
-#endif
-
-// Writes count of objects from the given array buffer to the output stream stream. The objects are written as if by reinterpreting each object as an array of unsigned char and calling fputc size times for each object to write those unsigned chars into stream, in order. The file position indicator for the stream is advanced by the number of characters written.
-//
-// If an error occurs, the resulting value of the file position indicator for the stream is indeterminate.
-// Parameters
-// buffer   -   pointer to the first object in the array to be written
-// size     -   size of each object
-// count    -   the number of the objects to be written
-// stream   -   pointer to the output stream
-// Return value
-//
-// The number of objects written successfully, which will be less than count only if an error occurs.
-//
-// If size or count is zero, fwrite returns zero and performs no other action. 
 
 
 

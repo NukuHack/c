@@ -20,6 +20,10 @@
 #     define BUF_LEN 128
 #endif /* BUF_LEN */
 
+#if !defined(destroy)
+#    define destroy(a) do { free(a);a=NULL; }while(0)
+#endif /* destroy */
+
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
 #  if !defined(WIN)
 #    define WIN
@@ -53,7 +57,9 @@
 #endif /* UINT_TYPE */
 
 #if !defined(KB) && !defined(MB) && !defined(GB) // rest not listed
-extern const char *const units[];
+extern const char *const units[]; // in c
+// yes i know they "should be" called like "kibibyte" for 1024 multipliers
+// but usually they are called "kilobyte" even if they should be just powers of 10 
 // #define B 1       //  byte      2**0
 #  define KB 1024    // kilobyte   2**10
 #  define MB KB * KB // megabyte   2**20
