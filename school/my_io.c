@@ -318,8 +318,8 @@ read:;
 }
 
 char *inps_s(const char *prompt) {
-    char *buf = (char*)malloc(BUF_LEN);
     size_t bufs = BUF_LEN;
+    char *buf = New(char, bufs);
     if (bufs <= 1 || !buf)
         return NULL;
     if (prompt) {

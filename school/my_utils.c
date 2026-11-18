@@ -49,20 +49,6 @@ double rand_double(void) {
     return (double)rand() / ((double)RAND_MAX + 1);
 }
 
-void mem_swap(void *a, void *b, size_t size) {
-    char buff[size];
-    memcpy(buff, a, size);
-    memcpy(a,  b, size);
-    memcpy(b, buff, size);
-}
-void swap(int *a, int *b) {
-    mem_swap(a, b, sizeof(int));
-}
-
-int *cmpp(int *a, int *b) {
-    return *a >= *b ? a : b;
-}
-
 void print(const char* str) {
     if (str) fputs(str, stdout);
     fputs("\n", stdout);

@@ -20,6 +20,7 @@
 #     define BUF_LEN 128
 #endif /* BUF_LEN */
 
+// only destroys pointers, files need different handling
 #if !defined(destroy)
 #    define destroy(a) do { free(a);a=NULL; }while(0)
 #endif /* destroy */
@@ -30,25 +31,29 @@
 #  endif /* win-def */
 #endif
 
+// array size + length (so if i need array + it's len i will not make mistake)
 #if !defined(ARR_L) && !defined(ARR_S)
 #  define ARR_L(x) x, ARR_S(x)
-#  define ARR_S(x) ((sizeof(x))/(sizeof(x[0])))
+#  define ARR_S(x) (sizeof(x)/sizeof(x[0]))
 #endif /* ARR_L and ARR_S */
 
+// evaulates values multiple times, careful with the calling
 #if !defined(CLAMP)
 #  define CLAMP(a, b, ty) (ty)MIN((a),(b)) // clamp a to b, return min, in type ty
 #endif
-
 #if !defined(MIN) && !defined(MAX) && !defined(ABS)
 #  define MIN(a, b) ((a) < (b) ? (a) : (b))
 #  define MAX(a, b) ((a) > (b) ? (a) : (b))
 #  define ABS(a) ((a) < 0 ? -(a) : (a))
+#  define MIN_D(a, b) MIN(*a, *b)
+#  define MAX_D(a, b) MAX(*a, *b)
 #endif /* MIN-MAX-ABS */
 
-#if !defined(LLU) && !defined(LL)
+#if !defined(LLU) && !defined(LL) && !defined(LU)
 #  define LLU long long unsigned int
 #  define LL long long int
-#endif /* LLU-LL */
+#  define LU long unsigned int
+#endif /* LLU-LL-LU */
 
 #if !defined(UINT_TYPE) && !defined(uint)
 #  define UINT_TYPE
@@ -56,10 +61,17 @@
 #  define uint uint
 #endif /* UINT_TYPE */
 
+// cast-less memory
+#define New(ty, n) ( (ty *) malloc((n) * sizeof(ty)) )
+#define New_c(ty, n) ( (ty *) calloc((n), sizeof(ty)) )
+
+// even operations can be treated as "tokens" soo nice
+#define Strcmp(A, o, B) (strcmp((A), (B)) o 0)
+
 #if !defined(KB) && !defined(MB) && !defined(GB) // rest not listed
-extern const char *const units[]; // in c
+extern const char *const units[]; // in code
 // yes i know they "should be" called like "kibibyte" for 1024 multipliers
-// but usually they are called "kilobyte" even if they should be just powers of 10 
+// but usually they are called "kilobyte" even if those should be just powers of 10 
 // #define B 1       //  byte      2**0
 #  define KB 1024    // kilobyte   2**10
 #  define MB KB * KB // megabyte   2**20
@@ -75,9 +87,14 @@ extern const char *const units[]; // in c
 
 
 /* swap the data of 2 pointers */
-void mem_swap(void *a, void *b, size_t size);
-/* swap the values of 2 int */
-void swap(int *a, int *b);
+#define mem_swap(a, b, ty) \
+  do( \
+    ty Tmp; \
+    memcpy(Tmp, (a), sizeof(ty)); \
+    memcpy((a), (b), sizeof(ty)); \
+    memcpy((b), Tmp, sizeof(ty)); \
+  )while(0)
+
 /* 2 pointers in alpha order, returns NULL if eq */
 char* alphabetic(char* a, char* b);
 /* count the words (separator take in) */

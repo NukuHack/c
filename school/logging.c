@@ -47,7 +47,7 @@ int log_main(void) {
     const char *file = "/latest.log";
     const char *tmp = temp_dir();
     size_t tmp_l = strlen(tmp), file_l = strlen(file);
-    char *path = (char*)malloc(tmp_l + file_l + 1);
+    char *path = (char*)malloc((tmp_l + file_l + 1) * sizeof(char));
     if (!path) {
         perror("malloc logfile");
         return 1;
