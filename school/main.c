@@ -49,10 +49,10 @@ int main(int argc, char **argv) {
             err("not a valid num");
             break;
     }
-#if defined(MEMCHECK)
-    check_ptr_arr();
-#endif
 
+#if defined(MEMCHECK)
+    check_mem_freed();
+#endif
     return 0;
 
 }
@@ -71,6 +71,7 @@ void fn_1(void) {
     }
     memcpy(cpy, inp, len + 1); // copy the nul term. too
     printf("copy is: \"%s\"\n", cpy);
+    destroy(cpy);
 }
 
 void fn_2(void) {
@@ -176,7 +177,7 @@ void fn_5(void) {
         return;
     }
     char *rev = arr_rev_str_new(ARR_Str(tmp));
-    printf("reversed : %s\n", tmp);
+    printf("reversed : %s\n", rev);
     destroy(rev);
 }
 
@@ -218,7 +219,7 @@ body:;;
         arr[count++] = cpy;
     }
     arr_print_str(arr, count);
-    destroy(arr);
+    goto dealloc;
 }
 
 

@@ -5,14 +5,16 @@
 
 #include "my_utils.h"
 
-void ad_c_ptr_arr(void *ptr, size_t s);
-#if ZERO
-size_t in_c_ptr_arr(void *ptr);
-#endif
-size_t rm_c_ptr_arr(void *ptr);
-void check_ptr_arr(void);
-size_t check_ptr_arr_emp(void);
+// main thing that should be used in other files
+void check_mem_freed(void);
 
+/* small checkers */
+void ad_c_ptr_arr(void *ptr, size_t s);
+size_t rm_c_ptr_arr(void *ptr);
+size_t in_c_ptr_arr(void *ptr);
+size_t hole_c_ptr_arr(void);
+
+/* memory method wrappers */
 void free_custom(void *ptr);
 void *malloc_custom(size_t s);
 void *calloc_custom(size_t z, size_t s);

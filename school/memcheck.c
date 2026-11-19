@@ -13,16 +13,26 @@ void *malloced_pointers[BUF_LEN] = {0};
 size_t pointer_sizes[BUF_LEN] = {0};
 size_t current_pointer = 0;
 
-void check_ptr_arr(void) {
+
+void check_mem_freed(void) {
+    bool clean = true;
     for (size_t i = current_pointer; i-- > 0;) {
         if (malloced_pointers[i]) {
             char num[20]; fmt_num((LLU)pointer_sizes[i], ARR_L(num));
             log_error("check: not freed memory %p (%s)\n",
                     malloced_pointers[i], num);
+            clean = false;
         }
     }
+    if (clean) {
+        log_debug("freed all memory nicely!");
+    } else {
+        log_error("memory trash remains!!");
+    }
 }
-size_t check_ptr_arr_emp(void) {
+
+
+size_t hole_c_ptr_arr(void) {
     for (size_t i = 0; BUF_LEN>i; i++) {
         if (!malloced_pointers[i]) {
             return i;
@@ -32,7 +42,6 @@ size_t check_ptr_arr_emp(void) {
     abort();
     return INVALID;
 }
-#if ZERO
 size_t in_c_ptr_arr(void *ptr) {
     for (size_t i = current_pointer; i-- > 0;) {
         if (malloced_pointers[i] == ptr) {
@@ -41,7 +50,6 @@ size_t in_c_ptr_arr(void *ptr) {
     }
     return INVALID;
 }
-#endif
 size_t rm_c_ptr_arr(void *ptr) {
     for (size_t i = current_pointer; i-- > 0;) {
         if (malloced_pointers[i] == ptr) {
@@ -53,7 +61,7 @@ size_t rm_c_ptr_arr(void *ptr) {
 }
 void ad_c_ptr_arr(void *ptr, size_t size) {
     if (current_pointer > BUF_LEN / 2) {
-        size_t i = check_ptr_arr_emp();
+        size_t i = hole_c_ptr_arr();
         if (i > current_pointer)
             current_pointer = i;
         malloced_pointers[i] = ptr;

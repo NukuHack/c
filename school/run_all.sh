@@ -32,17 +32,17 @@ inp="$1"
 arg="$2"
 
 run_files() {
-    local flag="$1"
+    local flags="$1"
     local files="$2"
     local inp="$3"
 
-    cbuild macro.c my_io.c my_utils.c $files $flags -- 2
-    cbuild my_utils.c $files $flag -Dmy_main='main'
-    cbuild arr_op.c my_utils.c $files -m arr_main $flag
-    # cbuild list_main.c list.c my_utils.c $files $flag
-    cbuild logging.c my_utils.c $files -m log_main $flag
-    cbuild logging.c my_utils.c $files -m log_main $flag $log_flag && rm -f $log_file
-    cbuild my_io.c my_utils.c $files -m input_main $flag
+    cbuild macro.c my_io.c my_utils.c $files $flags -- $inp
+    cbuild my_utils.c $files $flags -Dmy_main='main' -- $inp
+    cbuild arr_op.c my_utils.c $files -m arr_main $flags
+    # cbuild list_main.c list.c my_utils.c $files $flags
+    cbuild logging.c my_utils.c $files -m log_main $flags
+    cbuild logging.c my_utils.c $files -m log_main $flags $log_flag && rm -f $log_file
+    cbuild my_io.c my_utils.c $files -m input_main $flags
 }
 
 main_fn() {
@@ -50,19 +50,19 @@ main_fn() {
     local cas="$1"
     case "$cas" in
         "-b") # as basic
-            flag="-Xcc $base_flags"
+            flags="-Xcc $base_flags"
             files=""
-            run_files "$flag" "$files" "$arg"
+            run_files "$flags" "$files" "$arg"
             ;;
         "-un")
-            flag="-Xcc $base_flags $undef"
+            flags="-Xcc $base_flags $undef"
             files=""
-            run_files "$flag" "$files" "$arg"
+            run_files "$flags" "$files" "$arg"
             ;;
         "-mem")
-            flag="-Xcc $base_flags $leaky $mem_flags"
+            flags="-Xcc $base_flags $leaky $mem_flags"
             files="$mem_files "
-            run_files "$flag" "$files" "$arg"
+            run_files "$flags" "$files" "$arg"
             ;;
         "-f")
             echo "gcc <input-file> -o <output-exe>"
@@ -74,7 +74,7 @@ main_fn() {
             undefined test : $undef"
             ;;
         "-main") # as main
-            flag="-Xcc $base_flags $leaky $mem_flags $log_flag "
+            flags="-Xcc $base_flags $leaky $mem_flags $log_flag "
             files="$mem_files "
             cbuild main.c my_io.c my_utils.c arr_op.c $files $flags -- $arg
             ;;
