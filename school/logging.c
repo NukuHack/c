@@ -88,6 +88,9 @@ void log_clear(void) {
 }
 
 
+const char *log_clrcol(void) {
+    return "\033[0m";
+}
 const char *log_lvlcol(log_lvl lvl) {
     switch (lvl) {
         case TRACE: return "\033[32m";
@@ -95,7 +98,7 @@ const char *log_lvlcol(log_lvl lvl) {
         case INFO: return "\033[37m";
         case WARN: return "\033[33m";
         case ERROR: return "\033[31m";
-        default: return "\033[0m";
+        default: return log_clrcol();
     }
 }
 const char *log_lvlstr(log_lvl lvl) {
@@ -137,7 +140,7 @@ void log_line(log_lvl lvl, const char *msg) {
         if (len > 0)
             fputs(msg, out);
         if (show_color)
-            fputs(log_lvlcol((log_lvl)NULL), out);
+            fputs(log_clrcol(), out);
         if (!msg || !endN)
             fputc('\n', out);
 
@@ -164,7 +167,7 @@ void log_line(log_lvl lvl, const char *msg) {
         if (len > 0)
             fputs(msg, out);
         if (show_color_file)
-            fputs(log_lvlcol((log_lvl)NULL), out);
+            fputs(log_clrcol(), out);
         if (!msg || !endN)
             fputc('\n', out);
 

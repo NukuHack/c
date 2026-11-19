@@ -223,14 +223,13 @@ char* inps(void) {
 int inpi_s(const char* prompt, int min, int max) {
     if (min > max) { int t = min; min = max; max = t; }
 
-    int val, ret; int con;
+    int val;
     char buf[BUF_LEN];
 read:;
     if (!read_str(prompt, ARR_L(buf)))
         goto read;
-    ret = sscanf(buf, "%d %n", &val, &con);
-    if (ret == 1) {
-        if (buf[con] == '\0' && val >= min && val <= max)
+    if (strlen(buf) == (size_t)parse_i(buf, &val)) {
+        if (val >= min && val <= max)
             return val;
         else
             printf("input a number in [%d,%d]\n", min, max);
@@ -243,14 +242,13 @@ read:;
 uint inpu_s(const char* prompt, uint min, uint max) {
     if (min > max) { uint t = min; min = max; max = t; }
 
-    uint val; int ret; int con;
+    uint val;
     char buf[BUF_LEN];
 read:;
     if (!read_str(prompt, ARR_L(buf)))
         goto read;
-    ret = sscanf(buf, "%u %n", &val, &con);
-    if (ret == 1) {
-        if (buf[con] == '\0' && val >= min && val <= max)
+    if (strlen(buf) == (size_t)parse_u(buf, &val)) {
+        if (val >= min && val <= max)
             return val;
         else
             printf("input a number in [%u,%u]\n", min, max);
@@ -263,14 +261,13 @@ read:;
 double inpd_s(const char* prompt, double min, double max) {
     if (min > max) { double t = min; min = max; max = t; }
 
-    double val; int ret; int con;
+    double val;
     char buf[BUF_LEN];
 read:;
     if (!read_str(prompt, ARR_L(buf)))
         goto read;
-    ret = sscanf(buf, "%lf %n", &val, &con);
-    if (ret == 1) {
-        if (buf[con] == '\0' && isfinite(val) && val >= min && val <= max)
+    if (strlen(buf) == (size_t)parse_d(buf, &val)) {
+        if (isfinite(val) && val >= min && val <= max)
             return val;
         else
             printf("input a number in [%f,%f]\n", min, max);
@@ -282,14 +279,13 @@ read:;
 
 char inpc_s(const char* prompt, predicate *filter) {
 
-    char val; int ret; int con;
+    char val;
     char buf[BUF_LEN];
 read:;
     if (!read_str(prompt, ARR_L(buf)))
         goto read;
-    ret = sscanf(buf, "%1s %n", &val, &con);
-    if (ret == 1) {
-        if (buf[con] == '\0' && filter && filter(val))
+    if ((val = *buf) != '\0') {
+        if (buf[1] == '\0' && filter && val >= 0 && filter(val))
             return val;
         else
             printf("wrong char [not allowed]\n");

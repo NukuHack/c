@@ -1,4 +1,5 @@
 #include "arr_op.h" // self
+#include "macro.h"
 
 #define LENGTH 20
 
@@ -9,7 +10,7 @@ int arr_main(void) {
     arr_bubble(ARR_L(tomb));
     arr_rev(ARR_L(tomb));
 
-    arr_print(ARR_L(tomb));
+    arr_print(int, tomb, ARR_S(tomb));
 
     return 0;
 }
@@ -76,18 +77,7 @@ void arr_qsort(int *arr, size_t len) {
 }
 
 void arr_rev(int *arr, size_t len) {
-    array_reverse(int, arr, len);
-}
-
-void arr_print(const int *arr, size_t len) {
-    arr_foreach(int, var, arr, len) {
-        printf("idx %zu) : %d\n", arr_for_i, var);
-    }
-}
-
-void arr_print_str(char **arr, size_t len) {
-    for (size_t i = 0; i < len; i++)
-        printf("idx %zu) : %s\n", i, arr[i]);
+    arr_reverse(int, arr, len);
 }
 
 void arr_mul(const int *arr, const int *arr2, size_t len, int *mult) {

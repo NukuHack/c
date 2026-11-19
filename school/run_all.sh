@@ -3,9 +3,9 @@
 Usage="Usage is :
     $0 <flag> <arg>
   flags :
-     -main = run main.c with everything (-mem by default)
+     -main = run main.c with everything (similar flags like -mem)
      -mem = memory checking
-     -un = undefined & heap checks
+     -un = undefined checks
      -b = basic, no extra
      -f = list how they are run
 "
@@ -16,14 +16,14 @@ if [ "$#" -eq 0 ]; then
 fi
 
 base_flags="-W -Wall -Wextra -Wconversion -Warray-bounds -Wunused -Wwrite-strings \
--Wswitch -Wswitch-bool -Wmaybe-uninitialized -Waddress -Waggregate-return \
+-Wswitch -Wswitch-bool -Wmaybe-uninitialized -O -Waddress -Waggregate-return \
 -Waggressive-loop-optimizations -pedantic -Wpedantic -std=c99 -g "
 
 mem_flags=" -DMY_MEMCHECK -DMY_LOGGING=5 "
 mem_files="logging.c memcheck.c "
 
-leaky=" -fsanitize=leak " # this is for mem leaks
-undef=" -fsanitize=undefined " # this is for heap corruption
+leak=" -fsanitize=leak "
+undef=" -fsanitize=undefined "
 
 log_file="latest.log"
 log_flag="-DLOG_FILE=\"$log_file\" "
@@ -60,7 +60,7 @@ main_fn() {
             run_files "$flags" "$files" "$arg"
             ;;
         "-mem")
-            flags="-Xcc $base_flags $leaky $mem_flags"
+            flags="-Xcc $base_flags $leak $mem_flags"
             files="$mem_files "
             run_files "$flags" "$files" "$arg"
             ;;
@@ -70,11 +70,12 @@ main_fn() {
             echo "flags:
             base : $base_flags
             leak test : $leaky
-            manual : $manual_flags
-            undefined test : $undef"
+            mem : $mem_flags
+            undefined test : $undef
+            leak test : $leak"
             ;;
         "-main") # as main
-            flags="-Xcc $base_flags $leaky $mem_flags $log_flag "
+            flags="-Xcc $base_flags $leak $mem_flags $log_flag "
             files="$mem_files "
             cbuild main.c my_io.c my_utils.c arr_op.c $files $flags -- $arg
             ;;

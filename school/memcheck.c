@@ -16,7 +16,7 @@ size_t current_pointer = 0;
 
 void check_mem_freed(void) {
     bool clean = true;
-    for (size_t i = current_pointer; i-- > 0;) {
+    for (size_t i = 0; i<BUF_LEN; i++) {
         if (malloced_pointers[i]) {
             char num[20]; fmt_num((LLU)pointer_sizes[i], ARR_L(num));
             log_error("check: not freed memory %p (%s)\n",
@@ -43,7 +43,7 @@ size_t hole_c_ptr_arr(void) {
     return INVALID;
 }
 size_t in_c_ptr_arr(void *ptr) {
-    for (size_t i = current_pointer; i-- > 0;) {
+    for (size_t i = current_pointer + 1; i-- > 0;) {
         if (malloced_pointers[i] == ptr) {
             return pointer_sizes[i];
         }
@@ -51,7 +51,7 @@ size_t in_c_ptr_arr(void *ptr) {
     return INVALID;
 }
 size_t rm_c_ptr_arr(void *ptr) {
-    for (size_t i = current_pointer; i-- > 0;) {
+    for (size_t i = current_pointer + 1; i-- > 0;) {
         if (malloced_pointers[i] == ptr) {
             malloced_pointers[i] = NULL;
             return pointer_sizes[i];
@@ -73,21 +73,21 @@ void ad_c_ptr_arr(void *ptr, size_t size) {
 }
 
 
-void free_custom(void *ptr) {
+void free_my_c_im(void *ptr) {
     if (!ptr) { 
         log_error("free: NULL ....\n");
         return;
     }
-    size_t o;
-    if ((o = rm_c_ptr_arr(ptr)) == INVALID) {
+    size_t old;
+    if ((old = rm_c_ptr_arr(ptr)) == INVALID) {
         log_error("free: double freed memory : %p\n", ptr);
         return;
     }
-    char num[20]; fmt_num((LLU)o, ARR_L(num));
+    char num[20]; fmt_num((LLU)old, ARR_L(num));
     log_debug("free: done, %p removed from storage (%s)", ptr, num);
     free(ptr);
 }
-void *malloc_custom(size_t s) {
+void *malloc_my_c_im(size_t s) {
     void *ptr = (void*)malloc(s);
     char num[20]; fmt_num((LLU)s, ARR_L(num));
     if (!ptr) {
@@ -98,10 +98,10 @@ void *malloc_custom(size_t s) {
     }
     return ptr;
 }
-void *calloc_custom(size_t z, size_t s) {
+void *calloc_my_c_im(size_t z, size_t s) {
     size_t siz = z * s;
     char num[20]; fmt_num((LLU)siz, ARR_L(num));
-    void *ptr = (void*)calloc(1, siz);
+    void *ptr = (void*)calloc(z, s);
     if (!ptr) {
         log_error("calloc: could not calloc (%s)\n", num);
     } else {
@@ -110,31 +110,38 @@ void *calloc_custom(size_t z, size_t s) {
     }
     return ptr;
 }
-void *realloc_custom(void *ptr, size_t s) {
-    size_t o;
-    if (ptr && (o = rm_c_ptr_arr(ptr)) == INVALID) {
-        log_error("realloc: realloc of ptr, not ever malloc-ed : %p\n", ptr);
-        return NULL;
-    }
-    char num[20]; fmt_num((LLU)o, ARR_L(num));
-    if (ptr)
-        log_debug("realloc: removed %p from storage (%s)\n", ptr, num);
-    void *saved;
-    memcpy(&saved, &ptr, sizeof(void*)); // so gcc not complains about a "use after fee"
-    void *pptr = (void*)realloc(ptr, s);
-    char numS[20]; fmt_num((LLU)s, ARR_L(numS));
-    if (!pptr) {
-        log_error("realloc: could not realloc %p (%s) to (%s)\n", saved, num, numS);
-        if (saved) {
-            ad_c_ptr_arr(saved, o);
-            log_debug("realloc: re-saved (original) %p to storage (%s)\n", saved, num);
+void *realloc_my_c_im(void *ptr, size_t size) {
+    size_t old;
+    char num[20];
+    bool save = ptr != NULL;
+    if (save) {
+        if ((old = rm_c_ptr_arr(ptr)) == INVALID) {
+            log_error("realloc: realloc of ptr, not ever malloc-ed : %p\n", ptr);
+            return NULL;
         }
-        return NULL;
+        fmt_num((LLU)old, ARR_L(num));
+        log_debug("realloc: removed %p from storage (%s)\n", ptr, num);
+    }
+    void *pptr = (void*)realloc(ptr, size);
+    char numS[20]; fmt_num((LLU)size, ARR_L(numS));
+    if (size == 0) {
+        if (save)
+            log_debug("realloc: freed \"pointer\" (%s)\n", old);
+        else
+            log_debug("realloc: -_- freed ... a Null ..");
+    } else if (!pptr) {
+        if (save) {
+            log_error("realloc: could not realloc %p (%s) to (%s)\n", ptr, num, numS);
+            ad_c_ptr_arr(ptr, old);
+            log_debug("realloc: re-saved (original) %p to storage (%s)\n", ptr, num);
+        } else {
+            log_error("realloc: could not alloc (%s)\n", numS);
+        }
     } else {
         log_debug("realloc: saved %p to storage (%s)\n", pptr, numS);
-        ad_c_ptr_arr(pptr, s);
-        return pptr;
+        ad_c_ptr_arr(pptr, size);
     }
+    return pptr;
 }
 
 

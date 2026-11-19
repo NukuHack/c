@@ -24,20 +24,20 @@
 #if !defined(destroy) && !defined(destroy_arr)
 #    define destroy(a) \
       do { \
-        void *arr = (void*)(a); \
-        if(arr) \
-            free(arr); \
-        arr=NULL; \
+        void *arr__ = (void*)(a); \
+        if(arr__) \
+            free(arr__); \
+        arr__=NULL; \
       }while(0)
 #    define destroy_arr(a, len) \
       do { \
-        void *arr = (void*)(a); \
-        size_t count = (len); \
-        if (arr && count > 0) \
-            for(size_t i = 0; i<count; i++) \
-                destroy(arr + i); \
-        free(arr); \
-        arr=NULL; \
+        void **arr_ = (void**)(a); \
+        size_t count_ = (len); \
+        if (arr_ && count_ > 0) \
+            for(size_t i = 0; i<count_; i++) \
+                destroy(arr_[i]); \
+        free(arr_); \
+        arr_=NULL; \
       }  while (0)
 #endif /* destroy */
 
@@ -68,9 +68,11 @@
 #endif /* MIN-MAX-ABS */
 
 #if !defined(LLU) && !defined(LL) && !defined(LU)
-#  define LLU long long unsigned int
+#  define ULL long long unsigned int
+#  define LLU ULL
 #  define LL long long int
-#  define LU long unsigned int
+#  define UL long unsigned int
+#  define LU UL
 #endif /* LLU-LL-LU */
 
 #if !defined(UINT_TYPE) && !defined(uint)
@@ -91,28 +93,28 @@
 extern const char *const units[]; // in code
 // yes i know they "should be" called like "kibibyte" for 1024 multipliers
 // but usually they are called "kilobyte" even if those should be just powers of 10 
-// #define B 1       //  byte      2**0
-#  define KB 1024    // kilobyte   2**10
-#  define MB KB * KB // megabyte   2**20
-#  define GB MB * KB // gigabyte   2**30
-#  define TB GB * KB // terrabyte  2**40
-#  define PB TB * KB // petabyte   2**50
-#  define EB PB * KB // exabyte    2**60
-#  define ZB EB * KB // zettabyte  2**70
-#  define YB ZB * KB // yottabyte  2**80
-#  define RB YB * KB // ronnabyte  2**90
-#  define QB RB * KB // qettabyte  2**100
+// #define B 1L        //  byte      2**0
+#  define KB 1024ULL   // kilobyte   2**10
+#  define MB (KB * KB) // megabyte   2**20
+#  define GB (MB * KB) // gigabyte   2**30
+#  define TB (GB * KB) // terrabyte  2**40
+#  define PB (TB * KB) // petabyte   2**50
+#  define EB (PB * KB) // exabyte    2**60
+#  define ZB (EB * KB) // zettabyte  2**70
+#  define YB (ZB * KB) // yottabyte  2**80
+#  define RB (YB * KB) // ronnabyte  2**90
+#  define QB (RB * KB) // qettabyte  2**100
 #endif
 
 
 /* swap the data of 2 pointers */
 #define mem_swap(a, b, ty) \
-  do( \
+  do { \
     ty Tmp; \
-    memcpy(Tmp, (a), sizeof(ty)); \
+    memcpy(&Tmp, (a), sizeof(ty)); \
     memcpy((a), (b), sizeof(ty)); \
-    memcpy((b), Tmp, sizeof(ty)); \
-  )while(0)
+    memcpy((b), &Tmp, sizeof(ty)); \
+  } while(0)
 
 /* 2 pointers in alpha order, returns NULL if eq */
 char* alphabetic(char* a, char* b);
@@ -136,7 +138,7 @@ void clear(void);
 void err(const char* str);
 // Sleeps for a given number of milliseconds
 void slep(double millis);
-// temp dir, caller has to free it
+// temp dir, not thread safe
 const char *temp_dir(void);
 /* small check */
 bool check_file_exist(const char *name);
@@ -145,8 +147,6 @@ bool check_file_exist(const char *name);
 int cmp(int a, int b);
 // same as above, just for pointers
 int cmp_int_ptr(const void *a, const void *b);
-/* compare 2 int ptr (value), return bigger (a if eq) */
-int *cmpp(int *a, int *b);
 // generate a random between bounds
 int rand_int(int min, int max);
 // randm double (float) , 0-1

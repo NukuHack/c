@@ -1,5 +1,41 @@
+
+#ifndef MACRO_H
+#define MACRO_H
+
 #include "my_utils.h" // better io (renamed from small_lib.h)
 #include "my_io.h" // input
+#include <errno.h> // errno
+
+
+// "evaulate" everything only once
+// no need for "too special" variable names since they are scoped
+#define arr_reverse(Ty, arr, len) \
+    do { \
+        size_t len_ = (size_t)(len); \
+        Ty *ar_ = (arr); \
+        if (ar_ != NULL && len_ >= 2u) \
+        for (size_t i = 0; i < len_ / 2u; i++) { \
+            Ty tmp = ar_[i]; \
+            ar_[i] = ar_[len_ - i - 1u]; \
+            ar_[len_ - i - 1u] = tmp; \
+        } \
+    } while (0)
+
+// suffix the names, so less collision
+#define arr_foreach(Ty, var, arr, len) \
+    for (Ty var, *ar_s_ = (Ty *)(arr), *ar_p_ = ar_s_, \
+         *ar_e_ = ar_s_ ? ar_s_ + (size_t)(len) : ar_s_; \
+         ar_p_ != ar_e_ && ((var = *ar_p_), 1); ar_p_++)
+
+/* Current index; valid only inside an arr_foreach body. */
+#define arr_for_i ((size_t)(ar_p_ - ar_s_))
+
+#define arr_foreach_p(Ty, var, arr, len) \
+    for (Ty *var = (arr), *ar_e_ = var ? var + (size_t)(len) : var; var != ar_e_; ++var)
+
+#define arr_print(ty, arr, len) \
+    arr_foreach(ty, var, (arr), (len)) \
+        printf("idx %zu) : "SWITCH_FMT(ty)"\n", arr_for_i, var);
 
 
 // Basic string concat .. yet sooo powerful
@@ -63,6 +99,7 @@ typedef const char *cstr;
 #define printF(ty, val) printf(SWITCH_FMT(ty) "\n", val)
 #define VAR(ty, name, val) ty name = val;
 #define GET(ty, name) VAR(ty, name, SWITCH_GET(ty))
+
 
 
 #if !ZERO  /* printFF, switch with default branch, va-arg macro */
@@ -158,6 +195,9 @@ typedef const char *cstr;
 #define printERR fprintf(stderr, ERRNO_FMT, ERRNO_ARGS)
 
 
+
+#if ZERO // auto exit on false
+
 void _zero_or_die(int v, const char* filename, int line) {
     if (v != 0) {
        fprintf(stderr, "error %s:%d\n", filename, line);
@@ -167,6 +207,8 @@ void _zero_or_die(int v, const char* filename, int line) {
 }
 
 #define ZERO_OR_DIE_ for (int _i=1; _i == 1; _zero_or_die(_i, __FILE__, __LINE__)) _i=
+
+#endif
 
 
 /*! \brief Compile-time assertion.
@@ -190,13 +232,14 @@ void _zero_or_die(int v, const char* filename, int line) {
 #define cassert(x,i) typedef int ASSERTION_##i[(x)?1:-1]
 
 #define IMPLIES(x, y) (!(x) || (y))
-
 #define COLUMNS(S,E) [ (E) - (S) + 1 ]
 
 // no, just no
 #define REQUIRE_ARRAY(T, X) (void)(sizeof (((char(*)(T(*)[]))0)(&(X))))
 #define REQUIRE_ARRAY2(T, X) (void)(sizeof (((char(*)(T(*)[*][*]))0)(&(X))))
 
+
+#if ZERO // main ... in a header ?
 int main(int argc, char **argv) {
     if (argc == 1) {
         printf("Usage : %s <num>\n", argv[0]);
@@ -224,4 +267,8 @@ int main(int argc, char **argv) {
     CT_SWITCH(2)   /* puts("two");    */
     CT_SWITCH(42)  /* puts("default"); */
 }
+#endif
+
+#endif /* MACRO_H */
+
 

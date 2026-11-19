@@ -16,10 +16,13 @@
 #endif
 
 int my_main(int argc, char **argv) {
-    do {
+    while(1) {
         char **arg = shift_args(&argc, &argv);
-        print(*arg);
-    } while (argc > 0);
+        if (arg)
+            print(*arg);
+        else
+            break;
+    }
     return 0;
 }
 
@@ -84,7 +87,7 @@ void slep(double millis) {
     struct timespec ts;
     ts.tv_sec  = (time_t)(millis / 1000.0);
     ts.tv_nsec = (long)((millis - (double)ts.tv_sec * 1000.0) * 1e6);
-    while (nanosleep(&ts, &ts) == -1);
+    (void)nanosleep(&ts, &ts);
 #endif
 }
 
@@ -166,11 +169,9 @@ int count_words(const char *str, const char *sep) {
 }
 
 void strrep(char *str, int len, char old, char upd) {
-    for (--len; len > 0; len--) {
-        if (str[len] == old) {
+    for (--len; len >= 0; len--)
+        if (str[len] == old)
             str[len] = upd;
-        }
-    }
 }
 
 /* just for testing */
