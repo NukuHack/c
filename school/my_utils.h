@@ -22,7 +22,7 @@
 
 // only destroys pointers, files need different handling
 #if !defined(destroy)
-#    define destroy(a) do { free(a);a=NULL; }while(0)
+#    define destroy(a) do { if(a) free(a); a=NULL; }while(0)
 #endif /* destroy */
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
@@ -34,6 +34,8 @@
 // array size + length (so if i need array + it's len i will not make mistake)
 #if !defined(ARR_L) && !defined(ARR_S)
 #  define ARR_L(x) x, ARR_S(x)
+#  define ARR_LM(x) x, ARR_S(x)-1
+#  define ARR_Str(x) x, strlen(x)
 #  define ARR_S(x) (sizeof(x)/sizeof(x[0]))
 #endif /* ARR_L and ARR_S */
 
@@ -64,6 +66,7 @@
 // cast-less memory
 #define New(ty, n) ( (ty *) malloc((n) * sizeof(ty)) )
 #define New_c(ty, n) ( (ty *) calloc((n), sizeof(ty)) )
+#define Re_New(ty, old, n) ( (ty *) realloc((old), (n) * sizeof(ty)) )
 
 // even operations can be treated as "tokens" soo nice
 #define Strcmp(A, o, B) (strcmp((A), (B)) o 0)
@@ -103,13 +106,14 @@ int count_words(const char *str, const char *sep);
 void strrep(char *str, int len, char old, char upd);
 /* shift argv, argc and return the shifted out variable */
 char **shift_args(int *argc, char ***argv);
+// returns true if succcess
+// returns false (+ errno) if fails
+//  "n" is the current, not the needed, by default it doubles
+bool resize_buffer(void **bufptr, size_t *n);
+bool resize_buff_t(void **bufptr, size_t *n, size_t size);
 
 // print the string + \n
 void print(const char* str);
-// print a single int + \n
-void printi(int num);
-// print a single new-line
-void printn(void);
 // clean the screen and move to 0,0
 void clear(void);
 // print to err + \n
@@ -138,6 +142,7 @@ double bench_cpu_now(void);
 
 #if defined(MY_MEMCHECK)
 #  undef MY_MEMCHECK
+#  define MEMCHECK
 #  include "memcheck.h"
 #endif
 
@@ -149,7 +154,7 @@ double bench_cpu_now(void);
 // what does NOT exist at the time we need LOGGING
 // so yeah -- "bad switch case" :
 #elif defined(MY_LOGGING)
-#  if   MY_LOGGING == 0
+#  if MY_LOGGING == 0
 #    define LOGGING 0
 #  elif MY_LOGGING == 1
 #    define LOGGING 1

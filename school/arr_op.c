@@ -85,6 +85,11 @@ void arr_print(const int *arr, size_t len) {
     }
 }
 
+void arr_print_str(char **arr, size_t len) {
+    for (size_t i = 0; i < len; i++)
+        printf("idx %zu) : %s\n", i, arr[i]);
+}
+
 void arr_mul(const int *arr, const int *arr2, size_t len, int *mult) {
     if (!arr || !arr2 || !mult || len == 0)
         return;

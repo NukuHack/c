@@ -66,24 +66,6 @@ void trim_n(char *buf, size_t *bufs) {
 
 
 
-// returns true if succcess
-// returns false (+ errno) if fails
-bool resize_buffer(char **bufptr, size_t *n) {
-    if (*n > (size_t)-1 / 2) {
-        errno = ENOMEM;
-        return false;
-    }
-    size_t new_size = *n ? *n * 2 : BUF_LEN;
-    char *p = (char*)realloc(*bufptr, new_size);
-    if (!p) {
-        errno = ENOMEM;
-        return false;
-    }
-    *bufptr = p;
-    *n = new_size;
-    return true;
-}
-
 
 // basic wrapper for fgets
 ptrdiff_t fgetstack(char **bufptr, size_t *n, FILE *in) {
@@ -121,7 +103,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
         return -1; // wrong args
     }
     // we can use the same "realloc - resize", realloc "NULL" is just a malloc
-    if ((!*bufptr || *n < 2) && !resize_buffer(bufptr, n))
+    if ((!*bufptr || *n < 2) && !resize_buffer((void**)bufptr, n))
         return -1; // malloc failed 
 
     size_t len = 0;
@@ -131,7 +113,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     // os-independent, nothing like "getline" what only works "here and there" 
     while (1) {
         /* need room for next char + the NUL terminator */
-        if (*n - len < 2 && !resize_buffer(bufptr, n))
+        if (*n - len < 2 && !resize_buffer((void**)bufptr, n))
             return -1; // realloc failed
 
         int c = fgetc(in);
@@ -146,7 +128,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
 #else // this is dynamic alloc too, moved static stuff to "stack" method, since no mem resize
     if (!stpN) {
         while (1) {
-            if (*n - len < 2 && !resize_buffer(bufptr, n))
+            if (*n - len < 2 && !resize_buffer((void**)bufptr, n))
                 return -1; // realloc failed
 
             /* -1 reserves the NUL slot. fread never writes past it. */
@@ -161,7 +143,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     // so it's easier to just use fgets() since it stops at EOF and newline nicely
     while (1) {
         /* Room for at least 1 char + NUL. */
-        if (*n - len < 2 && !resize_buffer(bufptr, n))
+        if (*n - len < 2 && !resize_buffer((void**)bufptr, n))
             return -1; // realloc failed
 
         size_t avail = *n - len;    /* room including NUL */

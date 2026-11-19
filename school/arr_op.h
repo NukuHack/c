@@ -52,6 +52,8 @@ void arr_rev(int *arr, size_t len);
 void arr_mul(const int *arr, const int *arr2, size_t len, int *mult);
 // Print each index and value
 void arr_print(const int *arr, size_t len);
+// Print each value, for strings 
+void arr_print_str(char **arr, size_t len);
 
 #endif /* ARR_OP_H */
 

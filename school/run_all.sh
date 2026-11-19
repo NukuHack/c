@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 Usage="Usage is :
-    $0 <flag>
+    $0 <flag> <arg>
   flags :
+     -main = run main.c with everything (-mem by default)
      -mem = memory checking
      -un = undefined & heap checks
      -b = basic, no extra
@@ -24,38 +25,44 @@ mem_files="logging.c memcheck.c "
 leaky=" -fsanitize=leak " # this is for mem leaks
 undef=" -fsanitize=undefined " # this is for heap corruption
 
-inp="$1"
 log_file="latest.log"
+log_flag="-DLOG_FILE=\"$log_file\" "
+
+inp="$1"
+arg="$2"
 
 run_files() {
-    flag="$1"
-    files="$2"
+    local flag="$1"
+    local files="$2"
+    local inp="$3"
 
     cbuild macro.c my_io.c my_utils.c $files $flags -- 2
     cbuild my_utils.c $files $flag -Dmy_main='main'
     cbuild arr_op.c my_utils.c $files -m arr_main $flag
     # cbuild list_main.c list.c my_utils.c $files $flag
     cbuild logging.c my_utils.c $files -m log_main $flag
-    cbuild logging.c my_utils.c $files -m log_main $flag -DLOG_FILE=\"$log_file\" && rm -f $log_file
+    cbuild logging.c my_utils.c $files -m log_main $flag $log_flag && rm -f $log_file
     cbuild my_io.c my_utils.c $files -m input_main $flag
 }
 
 main_fn() {
-    case "$1" in
+    local arg="$2"
+    local cas="$1"
+    case "$cas" in
         "-b") # as basic
             flag="-Xcc $base_flags"
             files=""
-            run_files "$flag" "$files"
+            run_files "$flag" "$files" "$arg"
             ;;
         "-un")
             flag="-Xcc $base_flags $undef"
             files=""
-            run_files "$flag" "$files"
+            run_files "$flag" "$files" "$arg"
             ;;
         "-mem")
             flag="-Xcc $base_flags $leaky $mem_flags"
             files="$mem_files "
-            run_files "$flag" "$files"
+            run_files "$flag" "$files" "$arg"
             ;;
         "-f")
             echo "gcc <input-file> -o <output-exe>"
@@ -66,6 +73,11 @@ main_fn() {
             manual : $manual_flags
             undefined test : $undef"
             ;;
+        "-main") # as main
+            flag="-Xcc $base_flags $leaky $mem_flags $log_flag "
+            files="$mem_files "
+            cbuild main.c my_io.c my_utils.c arr_op.c $files $flags -- $arg
+            ;;
         *)
             echo "$Usage"
             exit 1
@@ -74,6 +86,6 @@ main_fn() {
     echo "Done - finished all"
 }
 
-main_fn "$inp"
+main_fn "$inp" "$arg"
 
 

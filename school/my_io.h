@@ -59,8 +59,8 @@ char inpc_s(const char* text, predicate *filter);
 // read_str doe not malloc, it uses the input buffer 
 // all consumes any extra from stdin, No re-try
 // on fail it return "NULL" (ofc no mem loss)
-char* inps(void);
-char* inps_s(const char* text);
+char *inps(void);
+char *inps_s(const char* text);
 char *read_str(const char *msg, char* buf, size_t bufs);
 
 /* parse from string, return the consumed chars */

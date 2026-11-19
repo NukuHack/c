@@ -2,6 +2,7 @@
 #include "my_utils.h" // self
 #include <time.h> // time, random seeding
 #include <limits.h> // RAND_MAX
+#include <errno.h> // perror, and errno, Cool
 
 // for sleep & terminal clear
 #if defined(WIN)
@@ -96,6 +97,46 @@ char **shift_args(int *argc, char ***argv) {
     *argv += 1;
     *argc -= 1;
     return arg;
+}
+
+bool resize_buffer(void **bufptr, size_t *n) {
+    if (!bufptr) {
+        errno = EINVAL;
+        return false;
+    }
+    if (*n > (size_t)-1 / 2) {
+        errno = ENOMEM;
+        return false;
+    }
+    size_t new_size = *n ? *n * 2 : BUF_LEN;
+    void *p = (void*)realloc(*bufptr, new_size);
+    if (!p) {
+        errno = ENOMEM;
+        return false;
+    }
+    *bufptr = p;
+    *n = new_size;
+    return true;
+}
+
+bool resize_buff_t(void **bufptr, size_t *n, size_t size) {
+    if (!bufptr || size == 0) {
+        errno = EINVAL;
+        return false;
+    }
+    if (*n > (size_t)-1 / 2 || size > (size_t)-1/2) {
+        errno = ENOMEM;
+        return false;
+    }
+    size_t new_size = (*n ? *n * 2 : BUF_LEN);
+    void *p = (void*)realloc(*bufptr, new_size * size);
+    if (!p) {
+        errno = ENOMEM;
+        return false;
+    }
+    *bufptr = p;
+    *n = new_size;
+    return true;
 }
 
 // ptr to first in alphab. ord.
