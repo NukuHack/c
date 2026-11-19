@@ -21,8 +21,24 @@
 #endif /* BUF_LEN */
 
 // only destroys pointers, files need different handling
-#if !defined(destroy)
-#    define destroy(a) do { if(a) free(a); a=NULL; }while(0)
+#if !defined(destroy) && !defined(destroy_arr)
+#    define destroy(a) \
+      do { \
+        void *arr = (void*)(a); \
+        if(arr) \
+            free(arr); \
+        arr=NULL; \
+      }while(0)
+#    define destroy_arr(a, len) \
+      do { \
+        void *arr = (void*)(a); \
+        size_t count = (len); \
+        if (arr && count > 0) \
+            for(size_t i = 0; i<count; i++) \
+                destroy(arr + i); \
+        free(arr); \
+        arr=NULL; \
+      }  while (0)
 #endif /* destroy */
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)

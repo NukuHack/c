@@ -89,7 +89,7 @@ body:;;
             err("input failed");
             goto dealloc;
         }
-        size_t len = strlen(inp) + 1; // copy the nul term. too
+        size_t len = strlen(inp) + 1; // space for the nul term. too
         char *tmp = Re_New(char, arr, size + len);
         if (!tmp) {
             perror("copy of string");
@@ -129,7 +129,7 @@ body:;;
         if (!is_number(tmp, &num))
             break;
 
-        if(!resize_buff_t((void**)&arr, &size, sizeof(int))) {
+        if ((size == 0 || size - 3 < count) && !resize_buff_t((void**)&arr, &size, sizeof(int))) {
             perror("resize");
             goto dealloc;
         }
@@ -159,7 +159,7 @@ void fn_4(void) {
     }
     arr_rev_str(ARR_Str(tmp));
 
-    printf("reversed : %s\n", tmp);
+    printf(" The reversed : %s\n", tmp);
 }
 
 char *arr_rev_str_new(char *arr, size_t len) {                                                    
@@ -177,7 +177,7 @@ void fn_5(void) {
         return;
     }
     char *rev = arr_rev_str_new(ARR_Str(tmp));
-    printf("reversed : %s\n", rev);
+    printf(" The reversed : %s\n", rev);
     destroy(rev);
 }
 
@@ -187,16 +187,11 @@ void fn_6(void) {
     size_t count = 0;
     goto body;
 dealloc:;;
-    if (arr && count > 0) {
-        for(size_t i = 0; i<count; i++) {
-            free(arr[i]);
-        }
-    }
-    free(arr);
+    destroy_arr(arr, count);
     return;
 body:;;
     while(1) {
-        char tmp[101];
+        char tmp[100]; // should change to "inps_s()"
         if (!read_str("Input a str: ", ARR_L(tmp))) {
             err("input failed");
             goto dealloc;
@@ -205,17 +200,17 @@ body:;;
         if (is_number(tmp, &num) && num == 0)
             break;
 
-        if(!resize_buff_t((void**)&arr, &size, sizeof(char*))) {
+        if ((size == 0 || size - 3 < count) && !resize_buff_t((void**)&arr, &size, sizeof(char))) {
             perror("resize");
             goto dealloc;
         }
         size_t len = strlen(tmp);
         char *cpy = New(char, len + 1); // auto cast
-        if (!cpy) { // could extract the check to a macro too !!
+        if (!cpy) {
             perror("copy of string");
             goto dealloc;
         }
-        memcpy(cpy, tmp, len + 1); // copy the nul term. too
+        memcpy(cpy, tmp, len + 1);
         arr[count++] = cpy;
     }
     arr_print_str(arr, count);
