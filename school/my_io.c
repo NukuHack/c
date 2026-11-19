@@ -70,7 +70,7 @@ void trim_n(char *buf, size_t *bufs) {
 // basic wrapper for fgets
 ptrdiff_t fgetstack(char **bufptr, size_t *n, FILE *in) {
     // no need for complex logic, since who would allocate memory on stack for an Entire file ...
-    if (!bufptr || !n || !in || !*bufptr || *n < 2) { /* need room for ≥1 char + NUL */
+    if (!bufptr || !n || !in || !*bufptr || *n < 2) { /* need room for atleast 1 char + NUL */
         errno = EINVAL;
         return -1;
     }
