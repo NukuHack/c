@@ -80,7 +80,7 @@ ptrdiff_t fgetstack(char **bufptr, size_t *n, FILE *in) {
     if (!fgets(*bufptr, chunk, in))
         return ferror(in) ? -1 : 0; /* distinguish error from EOF */
 
-    char *nul = memchr(*bufptr, '\0', *n);
+    char *nul = (char*)memchr(*bufptr, '\0', *n);
     if (!nul) {
         errno = EOVERFLOW;
         return -1;
@@ -153,7 +153,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
             break; /* EOF or error */
 
         /* fgets guarantees a NUL; memchr is bounded, unlike strlen, so no segfault. */
-        char *nul = memchr(*bufptr + len, '\0', (size_t)chunk);
+        char *nul = (char*)memchr(*bufptr + len, '\0', (size_t)chunk);
         size_t written = (size_t)(nul - (*bufptr + len));
         len += written;
 
@@ -186,7 +186,7 @@ ptrdiff_t fputbatch(char **bufptr, size_t *n, FILE *out, bool stpN) {
     }
     size_t write_len = *n * sizeof(char);
     if (stpN) {
-        char *nl = memchr(*bufptr, '\n', *n); // Search for '\n'
+        char *nl = (char*)memchr(*bufptr, '\n', *n); // Search for '\n'
         if (nl != NULL) {
             // Calculate length including '\n'
             write_len = (size_t)((char *)nl - *bufptr) + 1;
