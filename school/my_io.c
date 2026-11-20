@@ -101,8 +101,11 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
         return -1; // wrong args
     }
     // we can use the same "realloc - resize", realloc "NULL" is just a malloc
-    if ((!*bufptr || *n < 2) && !resize_buff_t((void**)bufptr, n, sizeof(char)))
+    char *p = *bufptr;
+    if ((!p || *n < 4u) && !(p = (char*)resize_buff(p, n, sizeof(char))))
         return -1; // malloc failed 
+    else
+        *bufptr = p;
 
     size_t len = 0;
 #if !ZERO
@@ -111,7 +114,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     // os-independent, nothing like "getline" what only works "here and there" 
     while (1) {
         /* need room for next char + the NUL terminator */
-        if (*n - len < 2 && !resize_buff_t((void**)bufptr, n, sizeof(char)))
+        IF_GROW(*bufptr, n, len, char)
             return -1; // realloc failed
 
         int c = fgetc(in);
@@ -126,7 +129,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
 #else // this is dynamic alloc too, moved static stuff to "stack" method, since no mem resize
     if (!stpN) {
         while (1) {
-            if (*n - len < 2 && !resize_buff_t(bufptr, n, sizeof(char)))
+            IF_GROW(*bufptr, n, len, char)
                 return -1; // realloc failed
 
             /* -1 reserves the NUL slot. fread never writes past it. */
@@ -141,7 +144,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     // so it's easier to just use fgets() since it stops at EOF and newline nicely
     while (1) {
         /* Room for at least 1 char + NUL. */
-        if (*n - len < 2 && !resize_buff_t(bufptr, n, sizeof(char)))
+        IF_GROW(*bufptr, n, len, char)
             return -1; // realloc failed
 
         size_t avail = *n - len;    /* room including NUL */

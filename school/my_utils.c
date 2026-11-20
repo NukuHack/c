@@ -101,36 +101,20 @@ char **shift_args(int *argc, char ***argv) {
 }
 
 void *resize_buff(void *buf, size_t *cap, size_t size) {
-    if (!cap || size == 0) {
+    if (!cap || size == 0 || size > GB || *cap > GB) {
         errno = EINVAL;
         return NULL;
-    }
+    } /* after this check it will NOT overflow in 64 bit systems */
 
     size_t new_cap = *cap ? *cap * 2 : BUF_LEN;
-    if (*cap * size > SIZE_MAX >> 1) {
+    /*if (*cap * size > SIZE_MAX >> 1) {
         errno = ENOMEM;
         return NULL;
-    }
+    }*/
     void *p = realloc(buf, new_cap * size);
-    if (!p)
-        return NULL;
-
+    if (!p) return NULL;
     *cap = new_cap;
     return p;
-}
-
-bool resize_buff_t(void **buf, size_t *cap, size_t size) {
-    if (!buf) {
-        errno = EINVAL;
-        return false;
-    }
-    
-    void *p = resize_buff(*buf, cap, size);
-    if (!p)
-        return false;
-    
-    *buf = p;
-    return true;
 }
 
 // ptr to first in alphab. ord.

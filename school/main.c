@@ -143,7 +143,7 @@ body:;;
         if (!is_number(tmp, &num))
             break;
 
-        if ((size == 0 || size - 3 < count) && !resize_buff_t((void**)&arr, &size, sizeof(int))) {
+        IF_GROW(arr, &size, count, int) {
             perror("resize");
             goto dealloc;
         }
@@ -203,7 +203,7 @@ body:;;
         if (is_number(tmp, &num) && num == 0)
             break;
 
-        if ((size == 0 || size - 3 < count) && !resize_buff_t((void**)&arr, &size, sizeof(char*))) {
+        IF_GROW(arr, &size, count, char*) {
             perror("resize");
             goto dealloc;
         }

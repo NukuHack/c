@@ -128,10 +128,43 @@ void strrep(char *str, int len, char old, char upd);
 /* shift argv, argc and return the shifted out variable */
 char **shift_args(int *argc, char ***argv);
 //  "cap" is the current capacity, by default it doubles
+//  "NULL" = failed, anything else is a prt caller must free
 void *resize_buff(void *bufptr, size_t *cap, size_t size);
-// returns true if succcess
-// returns false (+ errno) if fails
-bool resize_buff_t(void **bufptr, size_t *cap, size_t size);
+
+#define TRY_GROW(buf, cap, size, out_ok_) \
+    do { \
+        void *buf_ptr_ = (buf); \
+        size_t temp_cap_ = *(cap); \
+        size_t elem_size_ = (size); \
+        void *resize_out_ = resize_buff(buf_ptr_, &temp_cap_, elem_size_); \
+        if (resize_out_) { \
+            (buf) = resize_out_; \
+            *(cap) = temp_cap_; \
+            (out_ok_) = true; \
+        } else { \
+            (out_ok_) = false; \
+        } \
+    } while (0)
+
+// never frees, dealloc must be handled by the user
+#define IF_GROW(buf, cap, count, ty) \
+    bool tested_bool_at_grow_; /* this is exposed outside so only one 'IF_GROW' can be used in one scope */ \
+    do { /* inner scope not to expose the rest of the variables */ \
+        size_t current_size_ = *(cap); \
+        size_t current_count_ = (count); \
+        if (current_size_ < 4u || current_size_ < current_count_ + 3u) { \
+            void *buf_ptr_ = (buf); \
+            void *resize_out_ = resize_buff(buf_ptr_, &current_size_, sizeof(ty)); \
+            if (resize_out_) { \
+                (buf) = resize_out_; \
+                *(cap) = current_size_; \
+                tested_bool_at_grow_ = true; \
+            } else { \
+                tested_bool_at_grow_ = false; \
+            } \
+        } \
+    } while (0); \
+    if (!tested_bool_at_grow_) /* so after the macro we can do out custom handling */
 
 // print the string + \n
 void print(const char* str);
