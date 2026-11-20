@@ -2,7 +2,6 @@
 #ifndef ARR_OP_H
 #define ARR_OP_H
 
-#include <stdlib.h> // NULL
 #include "my_utils.h" // all utility
 
 // Returns max value, or 0

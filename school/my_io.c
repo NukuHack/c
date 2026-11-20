@@ -1,9 +1,7 @@
 #include "my_io.h" // self
 #include "my_utils.h" // basic io
 #include <limits.h> // limit for overflow checking
-#include <stdint.h> //  - || -
 #include <math.h> // double stuff for overflow & NAN
-#include <errno.h> // error checking mainly "EOF" and "errno" at builtin stuff
 #include <ctype.h> // basic char methods
 
 #define EOF_RETRY "closed input, but retry\n"
@@ -103,7 +101,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
         return -1; // wrong args
     }
     // we can use the same "realloc - resize", realloc "NULL" is just a malloc
-    if ((!*bufptr || *n < 2) && !resize_buffer((void**)bufptr, n))
+    if ((!*bufptr || *n < 2) && !resize_buff_t((void**)bufptr, n, sizeof(char)))
         return -1; // malloc failed 
 
     size_t len = 0;
@@ -113,7 +111,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     // os-independent, nothing like "getline" what only works "here and there" 
     while (1) {
         /* need room for next char + the NUL terminator */
-        if (*n - len < 2 && !resize_buffer((void**)bufptr, n))
+        if (*n - len < 2 && !resize_buff_t((void**)bufptr, n, sizeof(char)))
             return -1; // realloc failed
 
         int c = fgetc(in);
@@ -128,7 +126,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
 #else // this is dynamic alloc too, moved static stuff to "stack" method, since no mem resize
     if (!stpN) {
         while (1) {
-            if (*n - len < 2 && !resize_buffer((void**)bufptr, n))
+            if (*n - len < 2 && !resize_buff_t(bufptr, n, sizeof(char)))
                 return -1; // realloc failed
 
             /* -1 reserves the NUL slot. fread never writes past it. */
@@ -143,7 +141,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     // so it's easier to just use fgets() since it stops at EOF and newline nicely
     while (1) {
         /* Room for at least 1 char + NUL. */
-        if (*n - len < 2 && !resize_buffer((void**)bufptr, n))
+        if (*n - len < 2 && !resize_buff_t(bufptr, n, sizeof(char)))
             return -1; // realloc failed
 
         size_t avail = *n - len;    /* room including NUL */

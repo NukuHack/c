@@ -1,9 +1,20 @@
+
 // auto generated
 include/
-// executables
+
+// build dir
 build/
+
+// logs
 *.log
+
+// executables and libs
 *.out
+*exe
 *.so
 *.dll
-*exe
+
+// compiler output
+*.gch
+
+

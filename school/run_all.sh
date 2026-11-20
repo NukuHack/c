@@ -32,37 +32,48 @@ inp="$1"
 arg="$2"
 
 run_files() {
-    local flags="$1"
-    local files="$2"
-    local inp="$3"
+    local bui="$1"
+    local flags="$2"
+    local files="$3"
+    local inp="$4"
+    #not works
+    local rm_log=" && rm -f $log_file"
+    local out=" && ./a.out $inp"
 
-    cbuild macro.c my_io.c my_utils.c $files $flags -- $inp
-    cbuild my_utils.c $files $flags -Dmy_main='main' -- $inp
-    cbuild arr_op.c my_utils.c $files -m arr_main $flags
-    # cbuild list_main.c list.c my_utils.c $files $flags
-    cbuild logging.c my_utils.c $files -m log_main $flags
-    cbuild logging.c my_utils.c $files -m log_main $flags $log_flag && rm -f $log_file
-    cbuild my_io.c my_utils.c $files -m input_main $flags
+    if [[ "$bui" == "cbuild"  ]]; then
+        out=" -- $inp"
+    fi
+    $bui macro.h my_io.c my_utils.c $files $flags -Dmacro_main='main' $out
+    $bui my_utils.c $files $flags -Dmy_main='main' $out
+    $bui arr_op.c my_utils.c $files $flags -Darr_main='main' $out
+    $bui logging.c my_utils.c $files $flags -Dlog_main='main' $out
+    $bui logging.c my_utils.c $files $flags $log_flag -Dlog_main='main' $out $rm_log
+    $bui my_io.c my_utils.c $files $flags -Dinput_main='main' $out
 }
 
 main_fn() {
     local arg="$2"
     local cas="$1"
     case "$cas" in
+        "-gcc") # gcc !
+            flags=" $base_flags"
+            files=""
+            run_files "gcc" "$flags" "$files" "$arg"
+            ;;
         "-b") # as basic
             flags="-Xcc $base_flags"
             files=""
-            run_files "$flags" "$files" "$arg"
+            run_files "cbuild" "$flags" "$files" "$arg"
             ;;
         "-un")
             flags="-Xcc $base_flags $undef"
             files=""
-            run_files "$flags" "$files" "$arg"
+            run_files "cbuild" "$flags" "$files" "$arg"
             ;;
         "-mem")
             flags="-Xcc $base_flags $leak $mem_flags"
             files="$mem_files "
-            run_files "$flags" "$files" "$arg"
+            run_files "cbuild" "$flags" "$files" "$arg"
             ;;
         "-f")
             echo "gcc <input-file> -o <output-exe>"

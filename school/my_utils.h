@@ -10,11 +10,14 @@
 #  define __STDC_WANT_LIB_EXT1__ 1 // this adds "safe" methods from std
 #endif
 
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h> // io
 #include <stdbool.h> // bool
 #include <stddef.h> // size_t, ptrdiff_t aka ssize_t
 #include <stdlib.h> // basic memory & NULL
 #include <string.h> // batch mem op
+#include <stdint.h> // for max sizes
+#include <errno.h> // error mainly for "EOF" and "errno" at builtin stuff
 
 #if !defined(BUF_LEN)
 #     define BUF_LEN 128
@@ -124,11 +127,11 @@ int count_words(const char *str, const char *sep);
 void strrep(char *str, int len, char old, char upd);
 /* shift argv, argc and return the shifted out variable */
 char **shift_args(int *argc, char ***argv);
+//  "cap" is the current capacity, by default it doubles
+void *resize_buff(void *bufptr, size_t *cap, size_t size);
 // returns true if succcess
 // returns false (+ errno) if fails
-//  "n" is the current, not the needed, by default it doubles
-bool resize_buffer(void **bufptr, size_t *n);
-bool resize_buff_t(void **bufptr, size_t *n, size_t size);
+bool resize_buff_t(void **bufptr, size_t *cap, size_t size);
 
 // print the string + \n
 void print(const char* str);

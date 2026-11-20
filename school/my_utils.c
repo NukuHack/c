@@ -1,8 +1,6 @@
-#define _POSIX_C_SOURCE 200809L
 #include "my_utils.h" // self
 #include <time.h> // time, random seeding
 #include <limits.h> // RAND_MAX
-#include <errno.h> // perror, and errno, Cool
 
 // for sleep & terminal clear
 #if defined(WIN)
@@ -102,43 +100,36 @@ char **shift_args(int *argc, char ***argv) {
     return arg;
 }
 
-bool resize_buffer(void **bufptr, size_t *n) {
-    if (!bufptr) {
+void *resize_buff(void *buf, size_t *cap, size_t size) {
+    if (!cap || size == 0) {
         errno = EINVAL;
-        return false;
+        return NULL;
     }
-    if (*n > (size_t)-1 / 2) {
+
+    size_t new_cap = *cap ? *cap * 2 : BUF_LEN;
+    if (*cap * size > SIZE_MAX >> 1) {
         errno = ENOMEM;
-        return false;
+        return NULL;
     }
-    size_t new_size = *n ? *n * 2 : BUF_LEN;
-    void *p = (void*)realloc(*bufptr, new_size);
-    if (!p) {
-        errno = ENOMEM;
-        return false;
-    }
-    *bufptr = p;
-    *n = new_size;
-    return true;
+    void *p = realloc(buf, new_cap * size);
+    if (!p)
+        return NULL;
+
+    *cap = new_cap;
+    return p;
 }
 
-bool resize_buff_t(void **bufptr, size_t *n, size_t size) {
-    if (!bufptr || size == 0) {
+bool resize_buff_t(void **buf, size_t *cap, size_t size) {
+    if (!buf) {
         errno = EINVAL;
         return false;
     }
-    if (*n > (size_t)-1 / 2 || size > (size_t)-1/2) {
-        errno = ENOMEM;
+    
+    void *p = resize_buff(*buf, cap, size);
+    if (!p)
         return false;
-    }
-    size_t new_size = (*n ? *n * 2 : BUF_LEN);
-    void *p = (void*)realloc(*bufptr, new_size * size);
-    if (!p) {
-        errno = ENOMEM;
-        return false;
-    }
-    *bufptr = p;
-    *n = new_size;
+    
+    *buf = p;
     return true;
 }
 

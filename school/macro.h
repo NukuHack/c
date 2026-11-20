@@ -4,7 +4,6 @@
 
 #include "my_utils.h" // better io (renamed from small_lib.h)
 #include "my_io.h" // input
-#include <errno.h> // errno
 
 
 // "evaulate" everything only once
@@ -239,8 +238,7 @@ void _zero_or_die(int v, const char* filename, int line) {
 #define REQUIRE_ARRAY2(T, X) (void)(sizeof (((char(*)(T(*)[*][*]))0)(&(X))))
 
 
-#if ZERO // main ... in a header ?
-int main(int argc, char **argv) {
+int macro_main(int argc, char **argv) {
     if (argc == 1) {
         printf("Usage : %s <num>\n", argv[0]);
         return 1;
@@ -266,8 +264,9 @@ int main(int argc, char **argv) {
     CT_SWITCH(1)   /* puts("one");    */
     CT_SWITCH(2)   /* puts("two");    */
     CT_SWITCH(42)  /* puts("default"); */
+
+    return 0;
 }
-#endif
 
 #endif /* MACRO_H */
 

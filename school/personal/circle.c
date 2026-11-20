@@ -1,7 +1,4 @@
-#include <stdio.h>
-#include <stdbool.h>
 #include "my_utils.h"
-#include <unistd.h>
 
 #define SIZE 64
 static bool screen[SIZE][SIZE] = {0};

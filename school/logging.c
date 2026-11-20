@@ -1,6 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
 #include "logging.h" // self
-#include <errno.h> // err
 #include <stdarg.h> // va-arg
 
 /* local time */
