@@ -3,10 +3,6 @@
 
 #include "my_utils.h" // all utility
 
-#if !defined(IO)
-#  define IO stdin,stdout
-#endif /* IO */
-
 /*
  * get:
  * reads from "FILE *in", including '\n' (even in stpN mode)

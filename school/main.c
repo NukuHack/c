@@ -1,7 +1,6 @@
 #include "my_utils.h"
 #include "my_io.h"
 #include "arr_op.h"
-#include "macro.h"
 
 void fn_1(void);
 void fn_2(void);

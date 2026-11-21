@@ -1,6 +1,5 @@
-#include "my_utils.h"
 #include "arr_op.h" // self
-#include "macro.h"
+#include "my_utils.h"
 
 #define LENGTH 20
 

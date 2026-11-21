@@ -1,98 +1,24 @@
-
-#ifndef MACRO_H
-#define MACRO_H
-
 #include "my_utils.h" // better io (renamed from small_lib.h)
 #include "my_io.h" // input
 
+// empty
+#define EMPTY()
+#define DEFER(id) id EMPTY()
+// delays expansion by two rescans (needed because WHEN() rescans its body once more)
+#define DEFER2(id) id EMPTY EMPTY() ()
 
-// "evaulate" everything only once
-// no need for "too special" variable names since they are scoped
-#define arr_reverse(Ty, arr, len) \
-    do { \
-        size_t len_ = (size_t)(len); \
-        Ty *ar_ = (arr); \
-        if (ar_ != NULL && len_ >= 2u) \
-        for (size_t i = 0; i < len_ / 2u; i++) { \
-            Ty tmp = ar_[i]; \
-            ar_[i] = ar_[len_ - i - 1u]; \
-            ar_[len_ - i - 1u] = tmp; \
-        } \
-    } while (0)
-
-// suffix the names, so less collision
-#define arr_foreach(Ty, var, arr, len) \
-    for (Ty var, *ar_s_ = (Ty *)(arr), *ar_p_ = ar_s_, \
-         *ar_e_ = ar_s_ ? ar_s_ + (size_t)(len) : ar_s_; \
-         ar_p_ != ar_e_ && ((var = *ar_p_), 1); ar_p_++)
-
-/* Current index; valid only inside an arr_foreach body. */
-#define arr_for_i ((size_t)(ar_p_ - ar_s_))
-
-#define arr_foreach_p(Ty, var, arr, len) \
-    for (Ty *var = (arr), *ar_e_ = var ? var + (size_t)(len) : var; var != ar_e_; ++var)
-
-#define arr_print(ty, arr, len) \
-    arr_foreach(ty, var, (arr), (len)) \
-        printf("idx %zu) : "SWITCH_FMT(ty)"\n", arr_for_i, var);
-
-
-// Basic string concat .. yet sooo powerful
-#define CAT_I(a, b) a##b
-#define CAT(a, b) CAT_I(a, b)
-
-/* bool */
-#define NOT(c) CAT(NOT_, c)
-#define NOT_0 1
-#define NOT_1 0
-
-// this is insainly unsafe - what if the result is not 0 or 1 ...
-#define IF_0(t, f) f
-#define IF_1(t, f) t
-#define IF(cond, t, f) CAT(IF_, cond)(t, f)
-#define IF_T(cond, t) IF(cond, t, (void)0)
+/*  *variadic* conditional  */
+#define WHEN_1(...) __VA_ARGS__
+#define WHEN_0(...)
+#define WHEN(c) CAT(WHEN_, c)
 
 #define SWITCH(cond) CAT(SWITCH_, cond)
-#define SWITCH_M(cond, x) CAT(CAT(SWITCH_, cond), x)
-
-typedef char *char_ptr; // since preprocessor does not like "char*"
-typedef char *str; // "define" does not work either, since that get "transformed" back
-typedef const char *char_cptr;
-typedef const char *cstr;
-
-#define String_Fmt "%s"
-#define Decimal_Fmt "%d"
-#define Floating_Fmt "%f"
 
 // since this is a macro, but just a concat, it is really easy to extend to anything new from other files
 //   could make it safer, with default fallback (here it could be just an error print at compiletime)
 //   but that would need much more checking prop. __VA_ARGS__ so pain ...
-#define SWITCH_FMT_int Decimal_Fmt
-#define SWITCH_FMT_long "%ld"
-#define SWITCH_FMT_double Floating_Fmt
-#define SWITCH_FMT_char "%c"
-#define SWITCH_FMT_str String_Fmt
-#define SWITCH_FMT_cstr String_Fmt
-#define SWITCH_FMT_char_ptr String_Fmt
-#define SWITCH_FMT_char_cptr String_Fmt
-#define SWITCH_FMT_uint "%u"
-#define SWITCH_FMT_float Floating_Fmt
-
-#define SWITCH_GET_int inpi()
-// TODO : long
-#define SWITCH_GET_long (long)inpi()
-#define SWITCH_GET_double inpd()
-#define SWITCH_GET_char inpc()
-#define SWITCH_GET_str inps()
-#define SWITCH_GET_cstr inps()
-#define SWITCH_GET_char_ptr inps()
-#define SWITCH_GET_char_cptr inps()
-#define SWITCH_GET_uint inpu()
-// TODO : float
-#define SWITCH_GET_float (float)inpd()
-
-#define SWITCH_FMT(ty) SWITCH_M(FMT_, ty)
-#define SWITCH_GET(ty) SWITCH_M(GET_, ty)
+#define SWITCH_FMT(ty) CAT(FMT_, x)
+#define SWITCH_GET(ty) CAT(GET_, x)
 
 // "high level wrappers"
 #define printF(ty, val) printf(SWITCH_FMT(ty) "\n", val)
@@ -100,19 +26,11 @@ typedef const char *cstr;
 #define GET(ty, name) VAR(ty, name, SWITCH_GET(ty))
 
 
+#define arr_print(ty, arr, len) \
+    arr_foreach(ty, var, (arr), (len)) \
+        printf("idx %zu) : "SWITCH_FMT(ty)"\n", arr_for_i, var);
 
-#if !ZERO  /* printFF, switch with default branch, va-arg macro */
 
-/*  *variadic* conditional  */
-#define WHEN_1(...) __VA_ARGS__
-#define WHEN_0(...)
-#define WHEN(c) CAT(WHEN_, c)
-
-// empty
-#define EMPTY()
-#define DEFER(id) id EMPTY()
-// delays expansion by two rescans (needed because WHEN() rescans its body once more)
-#define DEFER2(id) id EMPTY EMPTY() ()
 
 // end check
 #define COMMA ,
@@ -164,7 +82,6 @@ typedef const char *cstr;
 #define printFF(...) \
     printf(WALK_FMT(__VA_ARGS__) "\n", WALK_VAL(__VA_ARGS__))
 
-#endif /* printFF, switch with default branch, va-arg macro */
 
 // disallowed : this is a c11 feature
 #define printF_(val) _Generic((val), \
@@ -189,13 +106,7 @@ typedef const char *cstr;
 
 
 
-#define ERRNO_FMT "errno= %d (\"%s\")"
-#define ERRNO_ARGS errno, strerror(errno)
-#define printERR fprintf(stderr, ERRNO_FMT, ERRNO_ARGS)
 
-
-
-#if ZERO // auto exit on false
 
 void _zero_or_die(int v, const char* filename, int line) {
     if (v != 0) {
@@ -207,7 +118,6 @@ void _zero_or_die(int v, const char* filename, int line) {
 
 #define ZERO_OR_DIE_ for (int _i=1; _i == 1; _zero_or_die(_i, __FILE__, __LINE__)) _i=
 
-#endif
 
 
 /*! \brief Compile-time assertion.
@@ -259,7 +169,7 @@ int macro_main(int argc, char **argv) {
     printF(cstr, __TIME__);
 
 
-    // printFF(cstr, name, int, score);
+    printFF(cstr, name, int, score);
     
     CT_SWITCH(1)   /* puts("one");    */
     CT_SWITCH(2)   /* puts("two");    */
@@ -267,7 +177,4 @@ int macro_main(int argc, char **argv) {
 
     return 0;
 }
-
-#endif /* MACRO_H */
-
 

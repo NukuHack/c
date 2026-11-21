@@ -1,8 +1,5 @@
 #include "my_io.h" // self
 #include "my_utils.h" // basic io
-#include <limits.h> // limit for overflow checking
-#include <math.h> // double stuff for overflow & NAN
-#include <ctype.h> // basic char methods
 
 #define EOF_RETRY "closed input, but retry\n"
 
@@ -67,12 +64,10 @@ void trim_n(char *buf, size_t *bufs) {
 
 // basic wrapper for fgets
 ptrdiff_t fgetstack(char **bufptr, size_t *n, FILE *in) {
-    // no need for complex logic, since who would allocate memory on stack for an Entire file ...
     if (!bufptr || !n || !in || !*bufptr || *n < 2) { /* need room for atleast 1 char + NUL */
         errno = EINVAL;
         return -1;
     }
-    /* fgets takes int; clamp so huge buffers don't overflow. */
     int chunk = CLAMP(*n, (size_t)INT_MAX, int);
 
     if (!fgets(*bufptr, chunk, in))
@@ -88,7 +83,6 @@ ptrdiff_t fgetstack(char **bufptr, size_t *n, FILE *in) {
     if (len == 0 && ferror(in))
         return -1;
 
-    /* (*bufptr)[len] is already '\0' - by fgets */
     if (len > (size_t)PTRDIFF_MAX) {
         errno = EOVERFLOW;
         return -1;
@@ -102,10 +96,15 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     }
     // we can use the same "realloc - resize", realloc "NULL" is just a malloc
     char *p = *bufptr;
-    if ((!p || *n < 4u) && !(p = (char*)resize_buff(p, n, sizeof(char))))
-        return -1; // malloc failed 
-    else
-        *bufptr = p;
+    if (!p || *n < 4u) {
+        //   #define TRY_GROW(buf, cap, size, out_ok_) 
+        bool ok = false;
+        TRY_GROW(p, n, sizeof(char), ok);
+        if (!ok)
+            return -1; // malloc failed 
+        else
+            *bufptr = p;
+    }
 
     size_t len = 0;
 #if !ZERO
@@ -126,7 +125,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
             break; /* end of line */
     }
     goto ending;
-#else // this is dynamic alloc too, moved static stuff to "stack" method, since no mem resize
+#else
     if (!stpN) {
         while (1) {
             IF_GROW(*bufptr, n, len, char)
@@ -384,14 +383,14 @@ int parse_d(const char *text, double *num) {
 
 int parse_u(const char *text, uint *num) {
     if (!text || !num) return -1;
-    // no negative
     const char *p = text;
     while (isspace((unsigned char)*p)) p++;
+    // no negative
     if (*p == '-') return -1;
 
     char *endptr;
     errno = 0;
-    unsigned long v = strtoul(text, &endptr, 10);
+    ulong v = strtoul(text, &endptr, 10);
     if (endptr == text) return 0;
     if (errno == ERANGE || v > UINT_MAX) return -1;
     *num = (uint)v;

@@ -1,6 +1,5 @@
 #include "my_utils.h" // self
 #include <time.h> // time, random seeding
-#include <limits.h> // RAND_MAX
 
 // for sleep & terminal clear
 #if defined(WIN)
@@ -98,23 +97,6 @@ char **shift_args(int *argc, char ***argv) {
     *argv += 1;
     *argc -= 1;
     return arg;
-}
-
-void *resize_buff(void *buf, size_t *cap, size_t size) {
-    if (!cap || size == 0 || size > GB || *cap > GB) {
-        errno = EINVAL;
-        return NULL;
-    } /* after this check it will NOT overflow in 64 bit systems */
-
-    size_t new_cap = *cap ? *cap * 2 : BUF_LEN;
-    /*if (*cap * size > SIZE_MAX >> 1) {
-        errno = ENOMEM;
-        return NULL;
-    }*/
-    void *p = realloc(buf, new_cap * size);
-    if (!p) return NULL;
-    *cap = new_cap;
-    return p;
 }
 
 // ptr to first in alphab. ord.
