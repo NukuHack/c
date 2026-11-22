@@ -74,46 +74,5 @@ void list_nuke_fn(List *list, void (*free_fn)(void*));
 void **list_free_get(List *list);
 // ^ this does not have "stack" version, since that is just the "get_all"
 
-// print entire "array" - casts the inner data to "int" without care
-// do not use for anything that is NOT a primitive
-void list_print(const List *list);
-
-typedef struct {
-    List *(*make)(void);
-    List *(*make_sz)(size_t size);
-    bool (*init)(List *list);
-    bool (*init_sz)(List *list, size_t size);
-    
-    bool (*reserve)(List *list, size_t size);
-    bool (*grow)(List *list);
-    bool (*resize)(List *list, size_t size, size_t byte);
-    bool (*resize_auto)(List *list);
-    bool (*truncate)(List *list, size_t size);
-    bool (*truncate_fn)(List *list, size_t size, void (*free_fn)(void*));
-    bool (*clear_fn)(List *list, void (*free_fn)(void*));
-    bool (*clear)(List *list);
-    
-    void *(*get)(const List *list, size_t idx);
-    void **(*get_all)(List *list);
-    size_t (*len)(const List *list);
-    bool (*put)(List *list, void *val);
-    bool (*ins)(List *list, void *val, size_t idx);
-    void *(*pop)(List *list);
-    void *(*rem)(List *list, size_t idx);
-    void *(*rep)(List *list, void *val, size_t idx);
-    void *(*head)(const List *list);
-    void *(*tail)(const List *list);
-    
-    void (*free)(List *list);
-    void (*free_fn)(List *list, void (*free_fn)(void*));
-    void (*nuke)(List *list);
-    void (*nuke_fn)(List *list, void (*free_fn)(void*));
-    void **(*free_get)(List *list);
-    
-    void (*print)(const List *list);
-} ListVTable;
-
-extern const ListVTable LIST_VTABLE;
-
 #endif /* LIST_H */
 

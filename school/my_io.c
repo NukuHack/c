@@ -18,11 +18,6 @@ int input_main(void) {
     double d = inpd();
     printf("double: %.3lf\n", d);
 
-    print("10 random double:");
-    for (int i = 0; i < 10; i++) {
-        printf("%d), %lf\n", i, rand_double());
-    }
-
     return 0;
 }
 
@@ -114,7 +109,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     // os-independent, nothing like "getline" what only works "here and there" 
     while (1) {
         /* need room for next char + the NUL terminator */
-        IF_GROW(*bufptr, n, len, char)
+        IF_NGROW(char, *bufptr, n, len)
             return -1; // realloc failed
 
         int c = fgetc(in);
@@ -129,7 +124,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
 #else
     if (!stpN) {
         while (1) {
-            IF_GROW(*bufptr, n, len, char)
+            IF_NGROW(char, *bufptr, n, len)
                 return -1; // realloc failed
 
             /* -1 reserves the NUL slot. fread never writes past it. */
@@ -144,7 +139,7 @@ ptrdiff_t fgetbatch(char **bufptr, size_t *n, FILE *in, bool stpN) {
     // so it's easier to just use fgets() since it stops at EOF and newline nicely
     while (1) {
         /* Room for at least 1 char + NUL. */
-        IF_GROW(*bufptr, n, len, char)
+        IF_NGROW(char, *bufptr, n, len)
             return -1; // realloc failed
 
         size_t avail = *n - len;    /* room including NUL */

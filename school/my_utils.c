@@ -24,30 +24,41 @@ int my_main(int argc, char **argv) {
 }
 
 static bool seeded = false;
-int rand_int(int min, int max) {
+void ensure_seed(void) {
     if (!seeded) {
         srand((unsigned)time(NULL));
         seeded = true;
     }
+}
+int randi_b(int min, int max) {
+    ensure_seed();
     if (min == max)
         return max;
 
     if (min > max) {
-        int t = min;
-        min = max;
-        max = t;
+        mem_swap(int, &min, &max);
     }
     long r = (long)rand() % (long)(max - min + 1);
     return (int)r + min;
 }
-
-double rand_double(void) {
-    if (!seeded) {
-        srand((unsigned)time(NULL));
-        seeded = true;
-    }
-
+int randi(void) {
+    ensure_seed();
+    return (int)rand();
+}
+double randd(void) {
+    ensure_seed();
     return (double)rand() / ((double)RAND_MAX + 1);
+}
+double randd_b(double min, double max) {
+    ensure_seed();
+    if (min == max)
+        return max;
+
+    if (min > max) {
+        mem_swap(double, &min, &max);
+    }
+    double val = (double)rand() / ((double)RAND_MAX + 1);
+    return val * (max - min) + min;
 }
 
 void print(const char* str) {
@@ -109,19 +120,19 @@ char *alphabetic(char *a, char *b) {
 }
 
 int count_words(const char *str, const char *sep) {
-    int cnt = 0;
-    if (!str || !*str) return 0;
+    if (!str || !*str || !sep || !*sep ) return 0;
     size_t initial = strspn(str, sep);
     if (initial > 0)
         str += initial; // if first char is a separator skip them
-    do {
+    int cnt = 0;
+    while(str && *str) {
         str = strpbrk(str, sep); // find separator
           // string-span would only skip one char
           // we also skip multiple of the separators if present
           // like "apple    tree" is still 2 words
         if(str) str += strspn(str, sep); // skip separator
         ++cnt; // increment word count
-    } while(str && *str);
+    }
     return cnt;
 }
 

@@ -80,8 +80,7 @@ main_fn() {
             echo "cbuild <input-file> -o <output-exe> -c <combined-code>"
             echo "flags:
             base : $base_flags
-            leak test : $leaky
-            mem : $mem_flags
+            mem : $mem_flags -- and link with: $mem_files
             undefined test : $undef
             leak test : $leak"
             ;;

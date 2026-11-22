@@ -46,7 +46,7 @@ int arr_sum(const int *arr, size_t len) {
 
 void arr_fill(int *arr, size_t len) {
     arr_foreach_p(int, var, arr, len)
-        *var = rand_int(0, 100);
+        *var = randi_b(0, 100);
 }
 
 void arr_set(int *arr, size_t len, int num) {

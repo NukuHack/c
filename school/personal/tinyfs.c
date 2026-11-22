@@ -159,6 +159,7 @@ void tf_closedir(tf_dir *d) {
     if (!d) return;
     if (d->d) closedir(d->d);
     free(d);
+    d = NULL;
 }
 
 #endif

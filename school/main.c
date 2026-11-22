@@ -14,6 +14,8 @@ bool is_number(const char *txt, int *num) {
     size_t len = strlen(txt);
     return len != 0 && len == (size_t)parse_i(txt, num);
 }
+// Why use rust if we can have MACROs
+//  the actual "zero cost abstraction" !!
 int main(int argc, char **argv) {
     char **arg = shift_args(&argc, &argv);
     if (argc == 0) {
@@ -41,21 +43,6 @@ int main(int argc, char **argv) {
         case(2):
             fn_2();
             break;
-        case(3):
-            fn_3();
-            break;
-        case(4):
-            fn_4();
-            break;
-        case(5):
-            fn_5();
-            break;
-        case(6):
-            fn_6();
-            break;
-        case(7):
-            fn_7();
-            break;
         default:
             err("not a valid num");
             break;
@@ -68,165 +55,88 @@ int main(int argc, char **argv) {
 
 }
 
+void init_arrs(int *id, double *avg, short *age, size_t len) {
+    arr_foreach_p(int, var, id, len)
+        *var = randi_b(100000, 0);
+    arr_foreach_p(double, var, avg, len)
+        *var = randd_b(5, 1);
+    arr_foreach_p(short, var, age, len)
+        *var = (short)randi_b(30, 15);
+}
 void fn_1(void) {
-    char inp[21];
-    if (!read_str("Input a line: ", ARR_L(inp))) {
-        err("input failed");
-        return;
-    }
-    size_t len = strlen(inp) + 1;
-    char *cpy = New(char, len); // auto cast
-    if (!cpy) { // could extract the check to a macro too !!
-        perror("copy of string");
-        return;
-    }
-    memcpy(cpy, inp, len);
-    printf("copy is: \"%s\"\n", cpy);
-    destroy(cpy);
+#define STUD_CNT 20
+    int id[STUD_CNT];
+    double avg[STUD_CNT];
+    short age[STUD_CNT];
+    init_arrs(id, avg, age, STUD_CNT);
+    arr_print(int, id, STUD_CNT);
+    arr_print(double, avg, STUD_CNT); // TODO : support for more precize formatting
+    arr_print(short, age, STUD_CNT);
 }
 
+struct student {
+    int id;
+    short age;
+    double avg;
+}; // sizeof() = 16 at best
+typedef struct student student_t; // student _ type
+
+student_t *student_init(void) {
+    student_t *st = New(student_t, 1);
+    st->id = randi_b(10000, 0),
+    st->age = (short)randi_b(30, 15),
+    st->avg = randd_b(1, 5);
+    return st;
+}
+#define ARG_student_t(st) (st).id, (st).age, (st).avg
+#define FMT_student_t "id='"FMT_int"', age='"FMT_short"' avg='"FMT_double"'"
+void student_print(student_t *st) {
+    printf("student: "FMT_student_t"\n", ARG_student_t(*st));
+}
+student_t *student_search(student_t **students, size_t len) { // pointers > arrays
+    if (!students || len == 0)
+        return NULL;
+    size_t idx = 0; double max = students[0]->avg;
+    arr_foreach_b(student_t*, st, students, len)
+        if (st->avg > max) {
+            idx = arr_for_i;
+            max = st->avg;
+        }
+    return students[idx];
+}
 void fn_2(void) {
-    // nem igazan ertem ezt a feladatot, szoval lesz igy
-    char inp[100];
-    char *arr = NULL;
+    printf("sizeof() of student : "FMT_size_t"\n", sizeof(student_t));
+    student_t *st = student_init();
+    student_print(st);
+    destroy(st);
+
+    student_t **arr = NULL;
+    size_t count = 0;
     size_t size = 0;
-    goto body;
-dealloc:;;
-    destroy(arr);
-    return;
-body:;;
-    for (int i = 0; i<5; i++) {
-        if (!read_str("Input a word: ", ARR_L(inp))) {
-            err("input failed");
-            goto dealloc;
+    forx(10) {
+        IF_NGROW(student_t*, arr, &size, count) {
+            printERR("student arr grow"); 
+            destroy_arr(arr, count);
+            return;
         }
-        size_t len = strlen(inp) + 1; // space for the nul term. too
-        char *tmp = Re_New(char, arr, size + len);
-        if (!tmp) {
-            perror("copy of string");
-            goto dealloc;
-        }
-        arr = tmp;
-        memcpy(arr + size, inp, len);
-        size += len;
+        arr[count++] = student_init();
     }
-    char *cursor = arr + size;
-    for (int i = 0; i < 5; i++) {
-        if (cursor > arr)
-            cursor--;
-
-        while (cursor > arr && *(cursor - 1) != '\0')
-            cursor--;
-
-        print(cursor);
+    forx(10) {
+        student_print(arr[i]);
     }
-    destroy(arr);
+    student_t *best = student_search(arr, count);
+    if (best) {
+        print("best student is:");
+        student_print(best);
+    } else {
+        err("something bad");
+    }
+
+    destroy_arr(arr, count);
 }
 
 void fn_3(void) {
-    int *arr = NULL;
-    size_t size = 0;
-    size_t count = 0;
-    goto body;
-dealloc:;;
-    destroy(arr);
-    return;
-body:;;
-    while(1) {
-        char tmp[100];
-        if (!read_str("Input a num: ", ARR_L(tmp))) {
-            err("input failed");
-            goto dealloc;
-        }
-        int num;
-        if (!is_number(tmp, &num))
-            break;
-
-        IF_GROW(arr, &size, count, int) {
-            perror("resize");
-            goto dealloc;
-        }
-        arr[count++] = num;
-
-    }
-    arr_reverse(arr, count);
-    arr_print(int, arr, count);
-    destroy(arr);
-}
-
-void fn_4(void) {
-    char tmp[100];
-    if (!read_str("Input a string: ", ARR_L(tmp))) {
-        err("input failed");
-        return;
-    }
-    arr_reverse(char, tmp, strlen(tmp));
-
-    printf(" The reversed : %s\n", tmp);
-}
-
-void fn_5(void) {
-    char tmp[100];
-    if (!read_str("Input a string: ", ARR_L(tmp))) {
-        err("input failed");
-        return;
-    }
-    size_t len = strlen(tmp);
-    arr_reverse(char, tmp, len);
-    char *cpy = New(char, len + 1);
-    if (!cpy) {
-        perror("copy of string");
-        return;
-    }
-    memcpy(cpy, tmp, len + 1);
-    printf(" The reversed : %s\n", cpy);
-    destroy(cpy);
-}
-
-void fn_6(void) {
-    char **arr = NULL;
-    size_t size = 0;
-    size_t count = 0;
-    goto body;
-dealloc:;;
-    destroy_arr(arr, count);
-    return;
-body:;;
-    while(1) {
-        char tmp[100]; // should change to "inps_s()"
-        if (!read_str("Input a str: ", ARR_L(tmp))) {
-            err("input failed");
-            goto dealloc;
-        }
-        int num;
-        if (is_number(tmp, &num) && num == 0)
-            break;
-
-        IF_GROW(arr, &size, count, char*) {
-            perror("resize");
-            goto dealloc;
-        }
-        size_t len = strlen(tmp);
-        char *cpy = New(char, len + 1);
-        if (!cpy) {
-            perror("copy of string");
-            goto dealloc;
-        }
-        memcpy(cpy, tmp, len + 1);
-        arr[count++] = cpy;
-    }
-    arr_print(str, arr, count);
-    goto dealloc;
-}
-
-void fn_7(void) {
-    char tmp[100];
-    if (!read_str("Input a string: ", ARR_L(tmp))) {
-        err("input failed");
-        return;
-    }
-    int c = count_words(tmp, " ");
-    printf("word count : %d\n", c);
+    err("TODO");
 }
 
 

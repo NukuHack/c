@@ -101,7 +101,7 @@ extern const char *const units[]; // in code
 
 
 /* swap the data of 2 pointers */
-#define mem_swap(a, b, ty) \
+#define mem_swap(ty, a, b) \
   do { \
     ty Tmp; size_t s = sizeof(ty); \
     memcpy(&Tmp, (a), s); \
@@ -142,13 +142,13 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
     do { \
         size_t *cap_p = (cap),  cap_,  size_, new_cap; \
         void *buf_ = (buf); \
-        if (!cap_p || !buf_ || (size_ = (size)) == 0 || size_ > GB || (cap_ = *cap_p) > GB) { \
+        if (!cap_p || (size_ = (size)) == 0 || size_ > GB || (cap_ = *cap_p) > GB) { \
             errno = EINVAL; \
             (out) = NULL; \
             break; \
         } /* after this check it will NOT overflow in 64 bit systems */ \
         new_cap = cap_ ? cap_ * 2 : BUF_LEN; \
-        (out) = realloc(buf, new_cap * size_); \
+        (out) = realloc(buf_, new_cap * size_); \
         if (!(out)) { \
             errno = ENOMEM; \
             (out) = NULL; \
@@ -172,30 +172,27 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
         } \
     } while (0)
 
-#define IF_GROW(buf, cap, count, ty) \
-    bool tested_bool_at_grow_; /* this is exposed outside so only one 'IF_GROW' can be used in one scope */ \
+// a proper name for this would be "if resizing this array failed"
+#define IF_NGROW(Ty, buf, cap, count) \
+    bool tested_bool_at_grow_ = true; /* this is exposed outside so only one of this macro can be used in one scope */ \
     do { /* inner scope not to expose the rest of the variables */ \
         size_t current_size_ = *(cap); \
         size_t current_count_ = (count); \
         if (current_size_ < 4u || current_size_ < current_count_ + 3u) { \
             void *buf_ptr_ = (buf), *p; \
-            resize_buff(p, buf_ptr_, &current_size_, sizeof(ty)); \
+            resize_buff(p, buf_ptr_, &current_size_, sizeof(Ty)); \
             if (p) { \
                 (buf) = p; \
                 *(cap) = current_size_; \
-                tested_bool_at_grow_ = true; \
-            } else { \
                 tested_bool_at_grow_ = false; \
             } \
+        } else { \
+            tested_bool_at_grow_ = false; \
         } \
     } while (0); \
-    if (!tested_bool_at_grow_) /* so after the macro we can do out custom handling */
+    if (!tested_bool_at_grow_) {} else /* so after the macro we can do out custom handling */
 
 
-
-#define ERRNO_FMT "errno= %d (\"%s\")"
-#define ERRNO_ARG errno, strerror(errno)
-#define printERR fprintf(stderr, ERRNO_FMT, ERRNO_ARG)
 
 
 #if !defined(IO)
@@ -232,11 +229,15 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define FMT_ulong "%lu"
 #define FMT_ullong "%llu"
 #define FMT_float FMT_double
+#define FMT_short FMT_int
+#define FMT_size_t "%zu"
+#define FMT_ptrdiff_t FMT_size_t
 
+// TODO : float & short & long & llong & ulong & ullong
 #define GET_int inpi()
-// TODO : long & llong & ulong & ullong
 #define GET_long (long)inpi()
 #define GET_llong (LL)inpi()
+#define GET_short (short)inpi()
 #define GET_uint inpu()
 #define GET_ulong (UL)inpu()
 #define GET_ullong (ULL)inpu()
@@ -244,7 +245,6 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define GET_char inpc()
 #define GET_str inps()
 #define GET_cstr inps()
-// TODO : float
 #define GET_float (float)inpd()
 
 // Compile time switch !!!!!!
@@ -259,6 +259,17 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define printF(ty, val) printf(SWITCH_FMT(ty) "\n", val)
 #define VAR(ty, name, val) ty name = val;
 #define GET(ty, name) VAR(ty, name, SWITCH_GET(ty))
+
+
+#define FMT_errno "errno='"FMT_int"' (\""FMT_cstr"\")"
+#define ARG_errno errno, strerror(errno)
+#define printERR(s) \
+    do { \
+    if (s) \
+        fputs(s, stderr); /* fprintf flishes for us */ \
+    fprintf(stderr, FMT_errno"\n", ARG_errno); \
+    } while (0)
+
 
 
 
@@ -276,22 +287,50 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
     } while (0)
 
 // only one foreach, can't put one inside another (like 2d foreach)
+// ar_s -> array start
+// ar_e -> array end
+// ar_p -> current element's ptr
+// var is the current element
 #define arr_foreach(Ty, var, arr, len) \
-    for (Ty var, *ar_s_ = (Ty *)(arr), *ar_p_ = ar_s_, \
-         *ar_e_ = ar_s_ ? ar_s_ + (size_t)(len) : ar_s_; \
-         ar_p_ != ar_e_ && ((var = *ar_p_), 1); ar_p_++)
+    /**/ \
+    for (Ty var, *arr_start_ = (Ty *)(arr), *arr_ptr_ = arr_start_, \
+         *arr_end_ = arr_start_ ? arr_start_ + (size_t)(len) : arr_start_; \
+         arr_ptr_ != arr_end_ && ((var = *arr_ptr_), 1); arr_ptr_++)
 
-/* Current index; valid only inside an arr_foreach body. */
-#define arr_for_i ((size_t)(ar_p_ - ar_s_))
+#define arr_foreach_b(Ty, var, arr, len) \
+    /* this is an awful version, Don't use it if possible */ \
+    Ty *arr_start_ = (arr); \
+    Ty *arr_ptr_ = arr_start_; \
+    Ty *arr_end_ = arr_start_ ? arr_start_ + (size_t)(len) : arr_start_; \
+    for (Ty var ;arr_ptr_ != arr_end_ && ((var = *arr_ptr_), 1); arr_ptr_++)
 
+// adds the star, so if input "ty" is a pointer, this will break
 #define arr_foreach_p(Ty, var, arr, len) \
-    for (Ty *var = (arr), *ar_e_ = var ? var + (size_t)(len) : var; var != ar_e_; var++)
+    for (Ty *var, *arr_start_ = (Ty *)(arr), *arr_ptr_ = arr_start_, \
+         *arr_end_ = arr_start_ ? arr_start_ + (size_t)(len) : arr_start_; \
+         arr_ptr_ != arr_end_ && ((var = arr_ptr_), 1); arr_ptr_++)
 
+/* Current index; valid only inside an arr_foreach/arr_foreach_p body. */
+#define arr_for_i ((size_t)(arr_ptr_ - arr_start_))
+
+#define forx(count) \
+    for (size_t i = 0; i<(count); i++)
 
 #define arr_print(ty, arr, len) \
-    arr_foreach(ty, var, (arr), (len)) \
-        printf("idx %zu) : "SWITCH_FMT(ty)"\n", arr_for_i, var);
+    do { \
+        printf(#arr " : ["); \
+        arr_foreach(ty, var, (arr), (len)) { \
+            if (arr_for_i != (len)-1) \
+                printf(SWITCH_FMT(ty)", ", var); \
+            else \
+                printf(SWITCH_FMT(ty), var); \
+        } \
+        printf("]\n"); \
+    } while (0);
 
+#define arr_print_n(ty, arr, len) \
+    arr_foreach(ty, var, (arr), (len)) \
+        printf("idx "FMT_size_t") : "SWITCH_FMT(ty)"\n", arr_for_i, var);
 
 #endif /* MY_MACRO */
 

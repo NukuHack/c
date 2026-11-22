@@ -50,9 +50,14 @@ int cmp(int a, int b);
 // same as above, just for pointers
 int cmp_int_ptr(const void *a, const void *b);
 // generate a random between bounds
-int rand_int(int min, int max);
-// randm double (float) , 0-1
-double rand_double(void);
+int randi_b(int min, int max);
+// random int
+int randi(void);
+// random double
+double randd(void);
+// random double, bounded
+// please no NAN in this !!!
+double randd_b(double min, double max);
 /* ---- CPU time ---- */
 double bench_cpu_now(void);
 
