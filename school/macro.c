@@ -12,24 +12,6 @@
 #define WHEN_0(...)
 #define WHEN(c) CAT(WHEN_, c)
 
-#define SWITCH(cond) CAT(SWITCH_, cond)
-
-// since this is a macro, but just a concat, it is really easy to extend to anything new from other files
-//   could make it safer, with default fallback (here it could be just an error print at compiletime)
-//   but that would need much more checking prop. __VA_ARGS__ so pain ...
-#define SWITCH_FMT(ty) CAT(FMT_, x)
-#define SWITCH_GET(ty) CAT(GET_, x)
-
-// "high level wrappers"
-#define printF(ty, val) printf(SWITCH_FMT(ty) "\n", val)
-#define VAR(ty, name, val) ty name = val;
-#define GET(ty, name) VAR(ty, name, SWITCH_GET(ty))
-
-
-#define arr_print(ty, arr, len) \
-    arr_foreach(ty, var, (arr), (len)) \
-        printf("idx %zu) : "SWITCH_FMT(ty)"\n", arr_for_i, var);
-
 
 
 // end check

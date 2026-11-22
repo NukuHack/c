@@ -94,12 +94,10 @@ typedef const char *str;      /* borrowed, like &str                  */
         abort();                                                  \
     } while (0)
 
-#if 0
 #define unreachable()  do {                                       \
         fprintf(stderr, "unreachable (%s:%d)\n",                  \
                 __FILE__, __LINE__);                              \
         abort();                                                  \
     } while (0)
-#endif
 
 #endif /* RUSTY_H */

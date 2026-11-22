@@ -1,5 +1,6 @@
 #include "my_io.h" // self
 #include "my_utils.h" // basic io
+#include <math.h> // double check
 
 #define EOF_RETRY "closed input, but retry\n"
 

@@ -33,7 +33,6 @@ int count_words(const char *str, const char *sep);
 void strrep(char *str, int len, char old, char upd);
 /* shift argv, argc and return the shifted out variable */
 char **shift_args(int *argc, char ***argv);
-
 // print the string + \n
 void print(const char* str);
 // clean the screen and move to 0,0
@@ -46,7 +45,6 @@ void slep(double millis);
 const char *temp_dir(void);
 /* small check */
 bool check_file_exist(const char *name);
-
 // compare, ++ = a bigger, -- = b bigger, 0 = equal
 int cmp(int a, int b);
 // same as above, just for pointers

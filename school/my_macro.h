@@ -81,14 +81,6 @@
 #  define cstr cstr
 #endif /* STR_TYPE */
 
-// cast-less memory
-#define New(ty, n) ( (ty *) malloc((n) * sizeof(ty)) )
-#define New_c(ty, n) ( (ty *) calloc((n), sizeof(ty)) )
-#define Re_New(ty, old, n) ( (ty *) realloc((old), (n) * sizeof(ty)) )
-
-// even operations can be treated as "tokens" soo nice
-#define Strcmp(A, o, B) (strcmp((A), (B)) o 0)
-
 #if !defined(KB) && !defined(MB) && !defined(GB) // rest not listed
 extern const char *const units[]; // in code
 // yes i know they "should be" called like "kibibyte" for 1024 multipliers
@@ -118,26 +110,16 @@ extern const char *const units[]; // in code
   } while(0)
 
 
+// even operations can be treated as "tokens" soo nice
+#define Strcmp(A, o, B) (strcmp((A), (B)) o 0)
+
+// auto cast memory alloc
+#define New(ty, n) ( (ty *) malloc((n) * sizeof(ty)) )
+#define New_c(ty, n) ( (ty *) calloc((n), sizeof(ty)) )
+#define Re_New(ty, old, n) ( (ty *) realloc((old), (n) * sizeof(ty)) )
+
 //  "cap" is the current capacity, by default it doubles
 //  "NULL" = failed, anything else is a prt caller must free
-#define resize_buff(out, buf, cap, size) \
-    do { \
-        size_t *cap_p = (cap),  cap_,  size_, new_cap; \
-        void *buf_ = (buf); \
-        if (!cap_p || !buf_ || (size_ = (size)) == 0 || size_ > GB || (cap_ = *cap_p) > GB) { \
-            errno = EINVAL; \
-            (out) = NULL; \
-            break; \
-        } /* after this check it will NOT overflow in 64 bit systems */ \
-        new_cap = cap_ ? cap_ * 2 : BUF_LEN; \
-        (out) = realloc(buf, new_cap * size_); \
-        if (!(out)) { \
-            errno = ENOMEM; \
-            (out) = NULL; \
-            break; \
-        } \
-        *(cap) = new_cap; \
-    } while (0)
 #if ZERO // original function, before macro
 void *resize_buff(void *buf, size_t *cap, size_t size) {
     if (!cap || size == 0 || size > GB || *cap > GB) {
@@ -156,6 +138,24 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
     return p;
 }
 #endif
+#define resize_buff(out, buf, cap, size) \
+    do { \
+        size_t *cap_p = (cap),  cap_,  size_, new_cap; \
+        void *buf_ = (buf); \
+        if (!cap_p || !buf_ || (size_ = (size)) == 0 || size_ > GB || (cap_ = *cap_p) > GB) { \
+            errno = EINVAL; \
+            (out) = NULL; \
+            break; \
+        } /* after this check it will NOT overflow in 64 bit systems */ \
+        new_cap = cap_ ? cap_ * 2 : BUF_LEN; \
+        (out) = realloc(buf, new_cap * size_); \
+        if (!(out)) { \
+            errno = ENOMEM; \
+            (out) = NULL; \
+            break; \
+        } \
+        *(cap) = new_cap; \
+    } while (0)
 
 // never frees, dealloc must be handled by the user
 #define TRY_GROW(buf, cap, size, out_ok_) \
@@ -231,7 +231,7 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define FMT_uint "%u"
 #define FMT_ulong "%lu"
 #define FMT_ullong "%llu"
-#define FMT_float "%f"
+#define FMT_float FMT_double
 
 #define GET_int inpi()
 // TODO : long & llong & ulong & ullong
@@ -246,6 +246,19 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define GET_cstr inps()
 // TODO : float
 #define GET_float (float)inpd()
+
+// Compile time switch !!!!!!
+// since this is a macro, but just a concat, it is really easy to extend to anything new from other files
+//   could make it safer, with default fallback (here it could be just an error print at compiletime)
+//   but that would need much more checking prop. __VA_ARGS__ so pain ...
+#define SWITCH(cond) CAT(SWITCH_, cond)
+#define SWITCH_FMT(ty) CAT(FMT_, ty)
+#define SWITCH_GET(ty) CAT(GET_, ty)
+
+// "high level wrappers"
+#define printF(ty, val) printf(SWITCH_FMT(ty) "\n", val)
+#define VAR(ty, name, val) ty name = val;
+#define GET(ty, name) VAR(ty, name, SWITCH_GET(ty))
 
 
 
@@ -262,7 +275,7 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
         } \
     } while (0)
 
-// suffix the names, so less collision
+// only one foreach, can't put one inside another (like 2d foreach)
 #define arr_foreach(Ty, var, arr, len) \
     for (Ty var, *ar_s_ = (Ty *)(arr), *ar_p_ = ar_s_, \
          *ar_e_ = ar_s_ ? ar_s_ + (size_t)(len) : ar_s_; \
@@ -272,8 +285,12 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define arr_for_i ((size_t)(ar_p_ - ar_s_))
 
 #define arr_foreach_p(Ty, var, arr, len) \
-    for (Ty *var = (arr), *ar_e_ = var ? var + (size_t)(len) : var; var != ar_e_; ++var)
+    for (Ty *var = (arr), *ar_e_ = var ? var + (size_t)(len) : var; var != ar_e_; var++)
 
+
+#define arr_print(ty, arr, len) \
+    arr_foreach(ty, var, (arr), (len)) \
+        printf("idx %zu) : "SWITCH_FMT(ty)"\n", arr_for_i, var);
 
 
 #endif /* MY_MACRO */

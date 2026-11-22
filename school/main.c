@@ -149,7 +149,7 @@ body:;;
         arr[count++] = num;
 
     }
-    arr_rev(arr, count);
+    arr_reverse(arr, count);
     arr_print(int, arr, count);
     destroy(arr);
 }

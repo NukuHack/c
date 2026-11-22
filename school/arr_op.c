@@ -8,7 +8,7 @@ int arr_main(void) {
 
     arr_fill(ARR_L(tomb));
     arr_bubble(ARR_L(tomb));
-    arr_rev(ARR_L(tomb));
+    arr_reverse(int, tomb, ARR_S(tomb));
 
     arr_print(int, tomb, ARR_S(tomb));
 
@@ -45,18 +45,16 @@ int arr_sum(const int *arr, size_t len) {
 
 
 void arr_fill(int *arr, size_t len) {
-    arr_foreach_p(int, var, arr, len) {
+    arr_foreach_p(int, var, arr, len)
         *var = rand_int(0, 100);
-    }
 }
 
 void arr_set(int *arr, size_t len, int num) {
-    arr_foreach_p(int, var, arr, len) {
+    arr_foreach_p(int, var, arr, len)
         *var = num;
-    }
 }
 
-// not even public, just ... for fun
+// todo : remove, use qsort
 void arr_bubble(int *arr, size_t len) {
     if (!arr || len == 0)
         return;
@@ -74,18 +72,6 @@ void arr_qsort(int *arr, size_t len) {
         return;
 
     qsort(arr, len, sizeof(int), cmp_int_ptr);
-}
-
-void arr_rev(int *arr, size_t len) {
-    arr_reverse(int, arr, len);
-}
-
-void arr_mul(const int *arr, const int *arr2, size_t len, int *mult) {
-    if (!arr || !arr2 || !mult || len == 0)
-        return;
-
-    for (size_t i = 0; i < len; i++)
-        mult[i] = arr[i] * arr2[i];
 }
 
 
