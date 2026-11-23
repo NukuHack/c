@@ -93,7 +93,7 @@
 void _zero_or_die(int v, const char* filename, int line) {
     if (v != 0) {
        fprintf(stderr, "error %s:%d\n", filename, line);
-       printERR;
+       printERR(NULL);
        exit(1);
     }
 }
@@ -140,7 +140,7 @@ int macro_main(int argc, char **argv) {
     VAR(int, score, 100);
     printF(int, score);
 
-    GET(double, l_score);
+    double l_score = inpd();
     printF(double, l_score);
 
     VAR(cstr, name, "hello");

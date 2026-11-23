@@ -3,10 +3,14 @@
 #define MY_MACRO
 
 
-#ifndef ZERO
+#if !defined(ZERO)
 // so i have sintax highlight in "if 0"
 #  define ZERO 0
 #endif /* ZERO */
+
+#if !defined(NOOP)
+#  define NOOP
+#endif
 
 #if !defined(BUF_LEN)
 #     define BUF_LEN 128
@@ -118,8 +122,10 @@ extern const char *const units[]; // in code
 #define New_c(ty, n) ( (ty *) calloc((n), sizeof(ty)) )
 #define Re_New(ty, old, n) ( (ty *) realloc((old), (n) * sizeof(ty)) )
 
-//  "cap" is the current capacity, by default it doubles
-//  "NULL" = failed, anything else is a prt caller must free
+/**
+ * "cap" is the current capacity, by default it doubles
+ * "NULL" = failed, anything else is a prt caller must free
+ */
 #if ZERO // original function, before macro
 void *resize_buff(void *buf, size_t *cap, size_t size) {
     if (!cap || size == 0 || size > GB || *cap > GB) {
@@ -158,6 +164,7 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
     } while (0)
 
 // never frees, dealloc must be handled by the user
+//  - this is an unconditional grow, check before
 #define TRY_GROW(buf, cap, size, out_ok_) \
     do { \
         void *buf_ptr_ = (buf), *ptr; \
@@ -172,7 +179,7 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
         } \
     } while (0)
 
-// a proper name for this would be "if resizing this array failed"
+// a proper name for this would be "if resizing the array failed"
 #define IF_NGROW(Ty, buf, cap, count) \
     bool tested_bool_at_grow_ = true; /* this is exposed outside so only one of this macro can be used in one scope */ \
     do { /* inner scope not to expose the rest of the variables */ \
@@ -200,7 +207,7 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #endif /* IO */
 
 
-// Basic string concat .. yet sooo powerful
+/* Basic string concat .. yet sooo powerful */
 #define CAT_I(a, b) a##b
 #define CAT(a, b) CAT_I(a, b)
 
@@ -209,12 +216,15 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define NOT_0 1
 #define NOT_1 0
 
-// this is insainly unsafe - what if the result is not 0 or 1 ...
+/**
+ * this is insainly unsafe
+ * - what if the condition's result is not 0 or 1 ...
+ */
 #define IF(cond, t, f) CAT(IF_, cond)(t, f)
 #define IF_0(t, f) f
 #define IF_1(t, f) t
-#define IF_T(cond, t) IF(cond, t, (void)0)
-#define IF_F(cond, f) IF(cond, (void)0, f)
+#define IF_T(cond, t) IF(cond, t, NOOP)
+#define IF_F(cond, f) IF(cond, NOOP, f)
 
 
 
@@ -233,43 +243,33 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define FMT_size_t "%zu"
 #define FMT_ptrdiff_t FMT_size_t
 
-// TODO : float & short & long & llong & ulong & ullong
-#define GET_int inpi()
-#define GET_long (long)inpi()
-#define GET_llong (LL)inpi()
-#define GET_short (short)inpi()
-#define GET_uint inpu()
-#define GET_ulong (UL)inpu()
-#define GET_ullong (ULL)inpu()
-#define GET_double inpd()
-#define GET_char inpc()
-#define GET_str inps()
-#define GET_cstr inps()
-#define GET_float (float)inpd()
-
-// Compile time switch !!!!!!
-// since this is a macro, but just a concat, it is really easy to extend to anything new from other files
-//   could make it safer, with default fallback (here it could be just an error print at compiletime)
-//   but that would need much more checking prop. __VA_ARGS__ so pain ...
+/**
+ * Compile time switch !!!!!!
+ * since this is a macro, but just a concat, it is really easy to extend to anything new from other files
+ * - could make it safer, with default fallback (here it could be just an error print at compiletime)
+ * - but that would need much more checking prop. __VA_ARGS__ so pain ...
+ */
 #define SWITCH(cond) CAT(SWITCH_, cond)
 #define SWITCH_FMT(ty) CAT(FMT_, ty)
-#define SWITCH_GET(ty) CAT(GET_, ty)
 
-// "high level wrappers"
+/* "high level wrappers" */
 #define printF(ty, val) printf(SWITCH_FMT(ty) "\n", val)
 #define VAR(ty, name, val) ty name = val;
-#define GET(ty, name) VAR(ty, name, SWITCH_GET(ty))
 
-
+/**
+ * a nice way to print an error
+ *  - if not an error, strerrno = Success
+ * so only use it at bugs / fails
+ */
 #define FMT_errno "errno='"FMT_int"' (\""FMT_cstr"\")"
 #define ARG_errno errno, strerror(errno)
 #define printERR(s) \
     do { \
-        if (s) \
-            fputs(s, stderr); /* fprintf flushes for us */ \
+        err(s); \
         fprintf(stderr, FMT_errno"\n", ARG_errno); \
     } while (0)
 
+/* print a pointer, if null print error */
 #define printP(ty, ptr) \
     do { \
         ty *ptr_ = (ptr); \
@@ -296,25 +296,14 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
         } \
     } while (0)
 
-// only one foreach, can't put one inside another (like 2d foreach)
-// ar_s -> array start
-// ar_e -> array end
-// ar_p -> current element's ptr
-// var is the current element
+/**
+ * only one foreach, can't put one inside another (like 2d foreach)
+ * adds the star, so if input "Ty" has "*", this will break
+ */
 #define arr_foreach(Ty, var, arr, len) \
-    /**/ \
     for (Ty var, *arr_start_ = (Ty *)(arr), *arr_ptr_ = arr_start_, \
          *arr_end_ = arr_start_ ? arr_start_ + (size_t)(len) : arr_start_; \
          arr_ptr_ != arr_end_ && ((var = *arr_ptr_), 1); arr_ptr_++)
-
-#define arr_foreach_b(Ty, var, arr, len) \
-    /* this is an awful version, Don't use it if possible */ \
-    Ty *arr_start_ = (arr); \
-    Ty *arr_ptr_ = arr_start_; \
-    Ty *arr_end_ = arr_start_ ? arr_start_ + (size_t)(len) : arr_start_; \
-    for (Ty var ;arr_ptr_ != arr_end_ && ((var = *arr_ptr_), 1); arr_ptr_++)
-
-// adds the star, so if input "ty" is a pointer, this will break
 #define arr_foreach_p(Ty, var, arr, len) \
     for (Ty *var, *arr_start_ = (Ty *)(arr), *arr_ptr_ = arr_start_, \
          *arr_end_ = arr_start_ ? arr_start_ + (size_t)(len) : arr_start_; \
@@ -323,9 +312,10 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 /* Current index; valid only inside an arr_foreach/arr_foreach_p body. */
 #define arr_for_i ((size_t)(arr_ptr_ - arr_start_))
 
-#define forx(count) \
-    for (size_t i = 0; i<(count); i++)
+/* for x times */
+#define forx(count) for (size_t i = 0; i<(count); i++)
 
+/* print an array, in one line */
 #define arr_print(ty, arr, len) \
     do { \
         printf(#arr " : ["); \
@@ -338,9 +328,11 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
         printf("]\n"); \
     } while (0);
 
+/* print an array, each item in a new line */
 #define arr_print_n(ty, arr, len) \
     arr_foreach(ty, var, (arr), (len)) \
         printf("idx "FMT_size_t") : "SWITCH_FMT(ty)"\n", arr_for_i, var);
+
 
 #endif /* MY_MACRO */
 

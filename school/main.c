@@ -1,4 +1,3 @@
-#include "my_utils.h"
 #include "my_vec.h"
 
 
@@ -16,14 +15,14 @@ typedef struct {
 
 int main(void) {
     DuoList v = {0};
-    vec_make(v, 20);
+    vec_alloc(v, 20);
 
     vec_push(v, 2.4);
     vec_push(v, 1.4);
     vec_push(v, 2.4);
     vec_push(v, 3.4);
 
-    vec_print_fmt(v, FMT_double);
+    vec_print(v, double);
     vec_destroy(v);
 
     IntList f = {0};
@@ -34,7 +33,7 @@ int main(void) {
     printP(int, x);
     vec_push(f, 3);
     
-    vec_print_fmt(f, FMT_int);
+    vec_print(f, int);
     vec_destroy(f);
 
 #if defined(MEMCHECK)

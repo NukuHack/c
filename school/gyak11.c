@@ -80,9 +80,10 @@ struct student {
     double avg;
 }; // sizeof() = 16 at best
 typedef struct student student_t; // student _ type
+typedef student_t *student_p; // stident _ pointer
 
-student_t *student_init(void) {
-    student_t *st = New(student_t, 1);
+student_p student_init(void) {
+    student_p st = New(student_t, 1);
     st->id = randi_b(10000, 0),
     st->age = (short)randi_b(30, 15),
     st->avg = randd_b(1, 5);
@@ -90,14 +91,14 @@ student_t *student_init(void) {
 }
 #define ARG_student_t(st) (st).id, (st).age, (st).avg
 #define FMT_student_t "id='"FMT_int"', age='"FMT_short"' avg='"FMT_double"'"
-void student_print(student_t *st) {
+void student_print(student_p st) {
     printf("student: "FMT_student_t"\n", ARG_student_t(*st));
 }
-student_t *student_search(student_t **students, size_t len) { // pointers > arrays
+student_p student_search(student_p *students, size_t len) { // pointers > arrays
     if (!students || len == 0)
         return NULL;
     size_t idx = 0; double max = students[0]->avg;
-    arr_foreach_b(student_t*, st, students, len)
+    arr_foreach(student_p, st, students, len)
         if (st->avg > max) {
             idx = arr_for_i;
             max = st->avg;
@@ -106,15 +107,15 @@ student_t *student_search(student_t **students, size_t len) { // pointers > arra
 }
 void fn_2(void) {
     printf("sizeof() of student : "FMT_size_t"\n", sizeof(student_t));
-    student_t *st = student_init();
+    student_p st = student_init();
     student_print(st);
     destroy(st);
 
-    student_t **arr = NULL;
+    student_p *arr = NULL;
     size_t count = 0;
     size_t size = 0;
     forx(10) {
-        IF_NGROW(student_t*, arr, &size, count) {
+        IF_NGROW(student_p, arr, &size, count) {
             printERR("student arr grow"); 
             destroy_arr(arr, count);
             return;
@@ -124,7 +125,7 @@ void fn_2(void) {
     forx(10) {
         student_print(arr[i]);
     }
-    student_t *best = student_search(arr, count);
+    student_p best = student_search(arr, count);
     if (best) {
         print("best student is:");
         student_print(best);

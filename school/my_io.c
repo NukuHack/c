@@ -5,7 +5,7 @@
 #define EOF_RETRY "closed input, but retry\n"
 
 int input_main(void) {
-    int size = inpi_s("inp number [0,10]: ", 0, 10);
+    int size = inpi_s("inp number [0,100]: ", 0, 100);
     printf("got: %d\n", size);
 
     char* str = inps();

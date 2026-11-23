@@ -53,6 +53,7 @@ run_files() {
 
 main_fn() {
     local arg="$2"
+    local arg2="$3"
     local cas="$1"
     case "$cas" in
         "-gcc") # gcc !
