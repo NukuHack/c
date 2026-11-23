@@ -39,6 +39,9 @@ ptrdiff_t fputbatch(char **bufptr, size_t *n, FILE *out, bool stpN);
 // used for char, allows stuff that returns "true"
 typedef int (predicate)(int);
 
+/* small helper */
+bool is_number(const char *txt, int *num);
+
 // Num inputs have a min-max of 10K, reason being ... nothing
 // usually we take in that kind of numbers, over 10k the caller should be explicit
 int inpi(void);

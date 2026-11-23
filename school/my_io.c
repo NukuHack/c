@@ -21,6 +21,12 @@ int input_main(void) {
     return 0;
 }
 
+
+bool is_number(const char *txt, int *num) {
+    size_t len = strlen(txt);
+    return len != 0 && len == (size_t)parse_i(txt, num);
+}
+
 /* helpers */
 
 void consume_crlf_tail(FILE *in) {

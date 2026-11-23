@@ -93,7 +93,7 @@
 void _zero_or_die(int v, const char* filename, int line) {
     if (v != 0) {
        fprintf(stderr, "error %s:%d\n", filename, line);
-       printERR(NULL);
+       perror("non zero");
        exit(1);
     }
 }
@@ -133,15 +133,15 @@ void _zero_or_die(int v, const char* filename, int line) {
 int macro_main(int argc, char **argv) {
     if (argc == 1) {
         printf("Usage : %s <num>\n", argv[0]);
-        return 1;
+    } else {
+        printF(str, argv[1]);
     }
-    printF(str, argv[1]);
 
     VAR(int, score, 100);
     printF(int, score);
 
-    double l_score = inpd();
-    printF(double, l_score);
+    VAR(double, var, 102.359);
+    printF(double, var);
 
     VAR(cstr, name, "hello");
     printF(cstr, name);

@@ -10,10 +10,6 @@ void fn_5(void);
 void fn_6(void);
 void fn_7(void);
 
-bool is_number(const char *txt, int *num) {
-    size_t len = strlen(txt);
-    return len != 0 && len == (size_t)parse_i(txt, num);
-}
 // Why use rust if we can have MACROs
 //  the actual "zero cost abstraction" !!
 int main(int argc, char **argv) {
@@ -52,7 +48,6 @@ int main(int argc, char **argv) {
     check_mem_freed();
 #endif
     return 0;
-
 }
 
 void init_arrs(int *id, double *avg, short *age, size_t len) {
@@ -116,7 +111,7 @@ void fn_2(void) {
     size_t size = 0;
     forx(10) {
         IF_NGROW(student_p, arr, &size, count) {
-            printERR("student arr grow"); 
+            perror("student arr grow"); 
             destroy_arr(arr, count);
             return;
         }

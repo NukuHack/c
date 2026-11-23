@@ -228,6 +228,8 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 
 
 
+#define FMT_bool "%.1d"
+#define FMT__Bool FMT_bool
 #define FMT_int "%d"
 #define FMT_long "%ld"
 #define FMT_llong "%lld"
@@ -256,25 +258,12 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define printF(ty, val) printf(SWITCH_FMT(ty) "\n", val)
 #define VAR(ty, name, val) ty name = val;
 
-/**
- * a nice way to print an error
- *  - if not an error, strerrno = Success
- * so only use it at bugs / fails
- */
-#define FMT_errno "errno='"FMT_int"' (\""FMT_cstr"\")"
-#define ARG_errno errno, strerror(errno)
-#define printERR(s) \
-    do { \
-        err(s); \
-        fprintf(stderr, FMT_errno"\n", ARG_errno); \
-    } while (0)
-
 /* print a pointer, if null print error */
 #define printP(ty, ptr) \
     do { \
         ty *ptr_ = (ptr); \
         if (!ptr_) { \
-            printERR("expected \""#ty"\" but got Null; "); \
+            perror("expected \""#ty"\" ptr, got Null"); \
         } else { \
             printF(ty, *ptr_); \
         } \

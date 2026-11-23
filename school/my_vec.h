@@ -22,7 +22,7 @@ struct Vec {
 /* this is pasted to ever place where any kind of memory operation fails */
 #if !defined(VEC_OOM_HANDLER)
 #  define VEC_OOM_HANDLER \
-    printERR("out of memory; "); \
+    perror("out of memory"); \
     exit(1);
 #endif
 
@@ -84,9 +84,19 @@ struct Vec {
     } while (0)
 
 /**
+ * push bach item arrayto the data-array, grow if needed
+ */
+#define vec_push_arr(vec, arr, len) \
+    do { \
+        forx(len) { \
+            vec_push(vec, arr[i]); \
+        } \
+    } while (0)
+
+/**
  * print each item in the data-array, using the FMT
  */
-#define vec_print_fmt(vec, fmt) \
+#define vec_print_fmt_n(vec, fmt) \
     do { \
         size_t cou_ = (vec).count; \
         for(size_t i = 0; i<cou_; i++) { \
@@ -94,9 +104,18 @@ struct Vec {
         } \
     } while (0)
 
+#define vec_print_fmt(vec, fmt) \
+    do { \
+        size_t cou_ = (vec).count; \
+        for(size_t i = 0; i<cou_; i++) { \
+            printf(fmt" ", (vec).data[i]); \
+        } \
+    } while (0)
+
 /**
  * prints using my_macro.h
  */
+#define vec_print_n(vec, ty) vec_print_fmt_n(vec, SWITCH_FMT(ty))
 #define vec_print(vec, ty) vec_print_fmt(vec, SWITCH_FMT(ty))
 
 /**
