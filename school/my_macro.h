@@ -265,9 +265,19 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define ARG_errno errno, strerror(errno)
 #define printERR(s) \
     do { \
-    if (s) \
-        fputs(s, stderr); /* fprintf flishes for us */ \
-    fprintf(stderr, FMT_errno"\n", ARG_errno); \
+        if (s) \
+            fputs(s, stderr); /* fprintf flushes for us */ \
+        fprintf(stderr, FMT_errno"\n", ARG_errno); \
+    } while (0)
+
+#define printP(ty, ptr) \
+    do { \
+        ty *ptr_ = (ptr); \
+        if (!ptr_) { \
+            printERR("expected \""#ty"\" but got Null; "); \
+        } else { \
+            printF(ty, *ptr_); \
+        } \
     } while (0)
 
 
