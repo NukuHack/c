@@ -5,10 +5,6 @@
 void fn_1(void);
 void fn_2(void);
 void fn_3(void);
-void fn_4(void);
-void fn_5(void);
-void fn_6(void);
-void fn_7(void);
 
 // Why use rust if we can have MACROs
 //  the actual "zero cost abstraction" !!
@@ -21,7 +17,7 @@ int main(int argc, char **argv) {
 
     arg = shift_args(&argc, &argv);
     int num = 0;
-    if (!is_number(*arg, &num)) {
+    if (!try_parse_i(*arg, &num)) {
         perror("input number"); // only partially parsed
         return 1;
     }
@@ -56,6 +52,9 @@ void init_arrs(int *id, double *avg, short *age, size_t len) {
     arr_foreach_p(short, var, age, len)
         *var = (short)randi_b(30, 15);
 }
+// macros used in this :
+// arr_foreach -> just a basic foreach impl. for arrays (_p suffix means iterate through the pointers)
+// arr_print -> using type's format, in an arr_foreach
 void fn_1(void) {
 #define STUD_CNT 20
     int id[STUD_CNT];
@@ -73,9 +72,7 @@ struct student {
     double avg;
 }; // sizeof() = 16 at best; 8 is the double, the rest is "nice" if can fit in another 8 bytes "__alignmentof()" or something
 typedef struct student student_t; // student _ type
-typedef student_t *student_p; // student _ pointer
-                              // had to make this so my macros work, mainly the foreach
-
+typedef student_t *student_p; // student _ pointer // had to make this so my macros work, mainly the foreach
 student_p student_init(void) {
     student_p st = New(student_t, 1);
     st->id = randi_b(10000, 0),
@@ -83,7 +80,7 @@ student_p student_init(void) {
     st->avg = randd_b(1, 5);
     return st;
 }
-#define ARG_student_t(st) (st).id, (st).age, (st).avg
+#define ARG_student_t(st) (st).id, (st).age, (st).avg /* TODO : make printF() accept ARG_<ty> "getters" */
 #define FMT_student_t "id='"FMT_int"', age='"FMT_short"' avg='"FMT_double"'"
 void student_print(student_p st) {
     printf("student: "FMT_student_t"\n", ARG_student_t(*st));
@@ -99,11 +96,18 @@ student_p student_search(student_p *students, size_t len) { // pointers > arrays
         }
     return students[idx];
 }
+// macros used here
+// IF_NGROW : drow a dynamic array, if failed enter the body of the { }
+// destroy_arr : free() for an array, and all it's elements
+// arr_foreach -> just a basic foreach impl. for arrays (_p suffix means iterate through the pointers)
+// New : use malloc without the need to cast and sizeof() manually
+// FMT_<ty> : formats for that type for printf
+// for-x : expands to for(i=0;i<x;i++)
 void fn_2(void) {
     printf("sizeof() of student : "FMT_size_t"\n", sizeof(student_t));
     student_p st = student_init();
     student_print(st);
-    destroy(st);
+    destroy(st); // kill the single student
 
     student_p *arr = NULL;
     size_t count = 0;
@@ -112,6 +116,7 @@ void fn_2(void) {
         IF_NGROW(student_p, arr, &size, count) {
             perror("student arr grow"); 
             destroy_arr(arr, count);
+            // del the entire array, count is the already insterted count, so should be correct
             return;
         }
         arr[count++] = student_init();
@@ -127,7 +132,7 @@ void fn_2(void) {
         puts("something bad");
     }
 
-    destroy_arr(arr, count);
+    destroy_arr(arr, count); // del the entire array
 }
 
 void fn_3(void) {
