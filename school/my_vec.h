@@ -154,7 +154,7 @@ struct Vec {
  * could not make it with only evaulating idx once
  */
 #define vec_get(vec, idx) \
-    (vec).count > (size_t)(idx) && (size_t)(idx) ? (vec).data + (idx) : NULL
+     (idx) >= 0 && (vec).count > (size_t)(idx)? (vec).data + (idx) : NULL
 
 
 // TODO :

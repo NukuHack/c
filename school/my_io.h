@@ -65,6 +65,16 @@ int parse_i(const char* text, int* num);
 int parse_d(const char* text, double* num);
 int parse_u(const char* text, uint* num);
 /* small helpers for parse */
+
+#define try_parse(ty, txt, num) \
+    do { \
+        char *text = (txt); \
+        ty *num_ = (num); \
+        size_t len = strlen(text); \
+        bool ret = len != 0 && len == (size_t)parse_##ty(text, num_); \
+        return ret; /* how thooo */ \
+    } while(0)
+
 bool try_parse_i(const char *txt, int *num);
 bool try_parse_u(const char *txt, uint *num);
 bool try_parse_d(const char *txt, double *num);

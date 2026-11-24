@@ -1,5 +1,4 @@
 #include "arr_op.h" // self
-#include "my_utils.h"
 
 #define LENGTH 20
 

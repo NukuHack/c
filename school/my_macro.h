@@ -306,9 +306,10 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 /* print an array, in one line */
 #define arr_print(ty, arr, len) \
     do { \
+        size_t len_ = (len); \
         printf(#arr " : ["); \
-        arr_foreach(ty, var, (arr), (len)) { \
-            if (arr_for_i != (len)-1) \
+        arr_foreach(ty, var, (arr), len_) { \
+            if (arr_for_i != len_-1) \
                 printf(SWITCH_FMT(ty)", ", var); \
             else \
                 printf(SWITCH_FMT(ty), var); \
