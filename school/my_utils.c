@@ -33,13 +33,12 @@ void ensure_seed(void) {
 int randi_b(int min, int max) {
     ensure_seed();
     if (min == max)
-        return max;
-
-    if (min > max) {
+        return min;
+    if (min > max)
         mem_swap(int, &min, &max);
-    }
-    long r = (long)rand() % (long)(max - min + 1);
-    return (int)r + min;
+
+    ULL span = (ULL)((ULL)max - (ULL)min) + 1ULL;
+    return (int)((LL)min + (LL)((ULL)rand() % span));
 }
 int randi(void) {
     ensure_seed();
@@ -54,9 +53,9 @@ double randd_b(double min, double max) {
     if (min == max)
         return max;
 
-    if (min > max) {
+    if (min > max)
         mem_swap(double, &min, &max);
-    }
+
     double val = (double)rand() / ((double)RAND_MAX + 1);
     return val * (max - min) + min;
 }
