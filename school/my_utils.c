@@ -16,7 +16,7 @@ int my_main(int argc, char **argv) {
     while(1) {
         char **arg = shift_args(&argc, &argv);
         if (arg)
-            print(*arg);
+            puts(*arg);
         else
             break;
     }
@@ -61,22 +61,8 @@ double randd_b(double min, double max) {
     return val * (max - min) + min;
 }
 
-void print(const char* str) {
-    if (str) fputs(str, stdout);
-    fputs("\n", stdout);
-}
-
-void err(const char* str) {
-    if (str) fputs(str, stderr);
-    fputs("\n", stderr);
-}
-
 int cmp(int a, int b) {
     return (a > b) - (a < b);
-}
-int cmp_int_ptr(const void *a, const void *b) {
-    int x = *(const int*)a, y = *(const int*)b;
-    return cmp(x, y);
 }
 
 void clear(void) {

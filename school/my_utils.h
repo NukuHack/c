@@ -33,12 +33,8 @@ int count_words(const char *str, const char *sep);
 void strrep(char *str, int len, char old, char upd);
 /* shift argv, argc and return the shifted out variable */
 char **shift_args(int *argc, char ***argv);
-// print the string + \n
-void print(const char* str);
 // clean the screen and move to 0,0
 void clear(void);
-// print to err + \n
-void err(const char* str);
 // Sleeps for a given number of milliseconds
 void slep(double millis);
 // temp dir, not thread safe
@@ -47,8 +43,6 @@ const char *temp_dir(void);
 bool check_file_exist(const char *name);
 // compare, ++ = a bigger, -- = b bigger, 0 = equal
 int cmp(int a, int b);
-// same as above, just for pointers
-int cmp_int_ptr(const void *a, const void *b);
 // generate a random between bounds
 int randi_b(int min, int max);
 // random int

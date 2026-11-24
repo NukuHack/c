@@ -34,9 +34,6 @@ int arr_min(const int *arr, size_t len) {
     return num;
 }
 int arr_sum(const int *arr, size_t len) {
-    if (!arr || len == 0)
-        return 0;
-
     int sum = 0;
     arr_foreach(int, var, arr, len)
         sum += var;
@@ -66,6 +63,11 @@ void arr_bubble(int *arr, size_t len) {
                 arr[j] = arr[j + 1];
                 arr[j + 1] = tmp;
             }
+}
+
+int cmp_int_ptr(const void *a, const void *b) {
+    int x = *(const int*)a, y = *(const int*)b;
+    return cmp(x, y);
 }
 void arr_qsort(int *arr, size_t len) {
     if (!arr || len == 0)

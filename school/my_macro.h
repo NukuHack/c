@@ -30,8 +30,7 @@
         void **arr_ = (void**)(a); /* this is theoretically undefined-behaviour but for now it's fine */ \
         size_t count_ = (len); \
         if (arr_ && count_ > 0) { \
-            for(size_t i = 0; i<count_; i++) \
-                destroy(arr_[i]); \
+            forx(count_) destroy(arr_[i]); \
             free(arr_); \
         } \
         arr_=NULL; \
@@ -278,7 +277,7 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
         size_t len_ = (size_t)(len); \
         Ty *ar_ = (arr); \
         if (ar_ != NULL && len_ >= 2u) \
-        for (size_t i = 0; i < len_ / 2u; i++) { \
+        forx(len_ / 2u) { \
             Ty tmp = ar_[i]; \
             ar_[i] = ar_[len_ - i - 1u]; \
             ar_[len_ - i - 1u] = tmp; \
@@ -302,7 +301,7 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define arr_for_i ((size_t)(arr_ptr_ - arr_start_))
 
 /* for x times */
-#define forx(count) for (size_t i = 0; i<(count); i++)
+#define forx(count) for (size_t i = 0, for_end_ = (count); i < for_end_; i++)
 
 /* print an array, in one line */
 #define arr_print(ty, arr, len) \

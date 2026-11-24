@@ -39,9 +39,6 @@ ptrdiff_t fputbatch(char **bufptr, size_t *n, FILE *out, bool stpN);
 // used for char, allows stuff that returns "true"
 typedef int (predicate)(int);
 
-/* small helper */
-bool is_number(const char *txt, int *num);
-
 // Num inputs have a min-max of 10K, reason being ... nothing
 // usually we take in that kind of numbers, over 10k the caller should be explicit
 int inpi(void);
@@ -55,10 +52,11 @@ double inpd_s(const char* text, double min, double max);
 char inpc_s(const char* text, predicate *filter);
 
 // string stuff - MALLOCS must free it after use 
-// read_str doe not malloc, it uses the input buffer 
+// read_str does not malloc, it uses the input buffer 
 // all consumes any extra from stdin, No re-try
 // on fail it return "NULL" (ofc no mem loss)
 char *inps(void);
+// TODO : max length for this
 char *inps_s(const char* text);
 char *read_str(const char *msg, char* buf, size_t bufs);
 
@@ -66,6 +64,10 @@ char *read_str(const char *msg, char* buf, size_t bufs);
 int parse_i(const char* text, int* num);
 int parse_d(const char* text, double* num);
 int parse_u(const char* text, uint* num);
+/* small helpers for parse */
+bool try_parse_i(const char *txt, int *num);
+bool try_parse_u(const char *txt, uint *num);
+bool try_parse_d(const char *txt, double *num);
 
 #endif /* MY_IO_H */
 

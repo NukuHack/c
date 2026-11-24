@@ -2,14 +2,15 @@
 #include "my_utils.h" // basic io
 #include <math.h> // double check
 
-#define EOF_RETRY "closed input, but retry\n"
+#define RETRY "bad input, but retry"
 
 int input_main(void) {
     int size = inpi_s("inp number [0,100]: ", 0, 100);
     printf("got: %d\n", size);
 
     char* str = inps();
-    print(str);
+    if (str)
+        puts(str);
     destroy(str);
 
     char c = inpc();
@@ -21,11 +22,6 @@ int input_main(void) {
     return 0;
 }
 
-
-bool is_number(const char *txt, int *num) {
-    size_t len = strlen(txt);
-    return len != 0 && len == (size_t)parse_i(txt, num);
-}
 
 /* helpers */
 
@@ -236,7 +232,7 @@ read:;
         else
             printf("input a number in [%d,%d]\n", min, max);
     } else {
-        printf(EOF_RETRY);
+        puts(RETRY);
     }
     goto read;
 }
@@ -255,7 +251,7 @@ read:;
         else
             printf("input a number in [%u,%u]\n", min, max);
     } else {
-        printf(EOF_RETRY);
+        puts(RETRY);
     }
     goto read;
 }
@@ -274,7 +270,7 @@ read:;
         else
             printf("input a number in [%f,%f]\n", min, max);
     } else {
-        printf(EOF_RETRY);
+        puts(RETRY);
     }
     goto read;
 }
@@ -292,7 +288,7 @@ read:;
         else
             printf("wrong char [not allowed]\n");
     } else {
-        printf(EOF_RETRY);
+        puts(RETRY);
     }
     goto read;
 }
@@ -366,10 +362,15 @@ int parse_i(const char *text, int *num) {
     char *endptr;
     errno = 0;
     long v = strtol(text, &endptr, 10);
-    if (endptr == text) return 0;
+    if (endptr == text) { errno = EINVAL; return 0;};
     if (errno == ERANGE || v < INT_MIN || v > INT_MAX) return -1;
     *num = (int)v;
     return (int)(endptr - text);
+}
+bool try_parse_i(const char *txt, int *num) {
+    size_t len = strlen(txt);
+    bool ret = len != 0 && len == (size_t)parse_i(txt, num);
+    return ret;
 }
 
 int parse_d(const char *text, double *num) {
@@ -377,10 +378,15 @@ int parse_d(const char *text, double *num) {
     char *endptr;
     errno = 0;
     double v = strtod(text, &endptr);
-    if (endptr == text) return 0;
+    if (endptr == text) { errno = EINVAL; return 0;};
     if (errno == ERANGE) return -1;
     *num = v;
     return (int)(endptr - text);
+}
+bool try_parse_u(const char *txt, uint *num) {
+    size_t len = strlen(txt);
+    bool ret = len != 0 && len == (size_t)parse_u(txt, num);
+    return ret;
 }
 
 int parse_u(const char *text, uint *num) {
@@ -393,10 +399,15 @@ int parse_u(const char *text, uint *num) {
     char *endptr;
     errno = 0;
     ulong v = strtoul(text, &endptr, 10);
-    if (endptr == text) return 0;
+    if (endptr == text) { errno = EINVAL; return 0;};
     if (errno == ERANGE || v > UINT_MAX) return -1;
     *num = (uint)v;
     return (int)(endptr - text);
+}
+bool try_parse_d(const char *txt, double *num) {
+    size_t len = strlen(txt);
+    bool ret = len != 0 && len == (size_t)parse_d(txt, num);
+    return ret;
 }
 
 
