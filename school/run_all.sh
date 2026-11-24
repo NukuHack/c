@@ -28,9 +28,6 @@ undef=" -fsanitize=undefined "
 log_file="latest.log"
 log_flag="-DLOG_FILE=\"$log_file\" "
 
-inp="$1"
-arg="$2"
-
 run_files() {
     local bui="$1"
     local flags="$2"
@@ -52,10 +49,8 @@ run_files() {
 }
 
 main_fn() {
-    local arg="$2"
-    local arg2="$3"
-    local cas="$1"
-    case "$cas" in
+    local arg="${@:2}"
+    case "$1" in
         "-gcc") # gcc !
             flags=" $base_flags"
             files=""
@@ -98,6 +93,6 @@ main_fn() {
     echo "Done - finished all"
 }
 
-main_fn "$inp" "$arg"
+main_fn "$@"
 
 

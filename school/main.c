@@ -10,7 +10,7 @@ void fn_3(void);
 cstr file_name = NULL;
 int main(int argc, char **argv) {
     char **arg = shift_args(&argc, &argv);
-    if (argc == 0) {
+    if (argc < 2) {
         if (arg) {
             printf("Usage : %s <num> <file>\n", *arg);
             return 1;
@@ -22,21 +22,12 @@ int main(int argc, char **argv) {
 
     arg = shift_args(&argc, &argv);
     int num = 0;
-    if (!arg || !is_number(*arg, &num)) {
-        if (!errno)
-            errno = EINVAL;
+    if (!is_number(*arg, &num)) {
         perror("input number");
         return 1;
     }
 
-    arg = shift_args(&argc, &argv);
-    if (!arg) {
-        if (!errno)
-            errno = EINVAL;
-        perror("input file");
-        return 1;
-    }
-    file_name = *arg;
+    file_name = *shift_args(&argc, &argv);
 
     switch(num) {
         case(1):

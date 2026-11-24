@@ -105,8 +105,8 @@ char **shift_args(int *argc, char ***argv) {
     char **arg = *argv;
 
     // Move argv pointer forward by one element (one char*)
-    *argv += 1;
-    *argc -= 1;
+    argv[0]++;
+    argc[0]--;
     return arg;
 }
 
