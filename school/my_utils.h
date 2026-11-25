@@ -1,6 +1,12 @@
 #ifndef MY_UTILS
 #define MY_UTILS
 
+#if defined(__GNUC__) && !defined(__clang__)
+// prevents hyper optimized loops to use std methods (like memset)
+#  pragma GCC push_options
+#  pragma GCC optimize("no-tree-loop-distribute-patterns")
+#endif
+
 #include "my_macro.h"
 
 #if ZERO
@@ -23,7 +29,6 @@
 #    define WIN
 #  endif /* win-def */
 #endif
-
 
 /* 2 pointers in alpha order, returns NULL if eq */
 char* alphabetic(char* a, char* b);

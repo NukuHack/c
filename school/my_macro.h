@@ -2,6 +2,11 @@
 #if !defined(MY_MACRO)
 #define MY_MACRO
 
+/**
+ * Why use Rust if we can use MACRO-s
+ *  - the actual "zero const abstraction" !
+ *  - perfectly compile time
+ */
 
 #if !defined(ZERO)
 // so i have sintax highlight in "if 0"
@@ -10,7 +15,7 @@
 
 #if !defined(NOOP)
 #  define NOOP
-#endif
+#endif /* NOOP - do nothing */
 
 #if !defined(BUF_LEN)
 #     define BUF_LEN 128
@@ -18,22 +23,15 @@
 
 // only destroys pointers, files need different handling
 #if !defined(destroy) && !defined(destroy_arr)
-#    define destroy(a) \
-      do { \
-        void *arr__ = (void*)(a); \
-        if(arr__) \
-            free(arr__); \
-        arr__=NULL; \
-      } while (0)
+#    define destroy(x) do { free(x); (x) = NULL; } while(0)
 #    define destroy_arr(a, len) \
       do { \
         void **arr_ = (void**)(a); /* this is theoretically undefined-behaviour but for now it's fine */ \
-        size_t count_ = (len); \
-        if (arr_ && count_ > 0) { \
+        size_t count_ = (size_t)(len); \
+        if (arr_ && count_) { \
             forx(count_) destroy(arr_[i]); \
-            free(arr_); \
+            destroy(arr_); \
         } \
-        arr_=NULL; \
       }  while (0)
 #endif /* destroy */
 
@@ -78,7 +76,7 @@
 #if !defined(STR_TYPE) && !defined(str)
 #  define STR_TYPE
    // since preprocessor does not like "char*"
-   typedef char *str; // "define" does not work either, since that get "transformed" back
+   typedef char *str;
    typedef const char *cstr;
 #  define str str
 #  define cstr cstr
@@ -130,13 +128,12 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
     if (!cap || size == 0 || size > GB || *cap > GB) {
         errno = EINVAL;
         return NULL;
-    } /* after this check it will NOT overflow in 64 bit systems */
-
+    }
     size_t new_cap = *cap ? *cap * 2 : BUF_LEN;
-    /*if (*cap * size > SIZE_MAX >> 1) {
+    if (*cap * size > SIZE_MAX >> 1) {
         errno = ENOMEM;
         return NULL;
-    }*/
+    }
     void *p = realloc(buf, new_cap * size);
     if (!p) return NULL;
     *cap = new_cap;
@@ -292,6 +289,7 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
     for (Ty var, *arr_start_ = (Ty *)(arr), *arr_ptr_ = arr_start_, \
          *arr_end_ = arr_start_ ? arr_start_ + (size_t)(len) : arr_start_; \
          arr_ptr_ != arr_end_ && ((var = *arr_ptr_), 1); arr_ptr_++)
+
 #define arr_foreach_p(Ty, var, arr, len) \
     for (Ty *var, *arr_start_ = (Ty *)(arr), *arr_ptr_ = arr_start_, \
          *arr_end_ = arr_start_ ? arr_start_ + (size_t)(len) : arr_start_; \
@@ -307,7 +305,7 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define arr_print(ty, arr, len) \
     do { \
         size_t len_ = (len); \
-        printf(#arr " : ["); \
+        printf(#arr ") : ["); \
         arr_foreach(ty, var, (arr), len_) { \
             if (arr_for_i != len_-1) \
                 printf(SWITCH_FMT(ty)", ", var); \
