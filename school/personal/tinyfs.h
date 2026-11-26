@@ -35,5 +35,3 @@ void parent_dir(const char *path, char *out, size_t outsz);
 
 #endif /* TINYFS_H */
 
-
-

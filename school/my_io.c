@@ -1,5 +1,4 @@
 #include "my_io.h" // self
-#include "my_utils.h" // basic io
 #include <math.h> // double check
 
 #define RETRY "bad input, but retry"

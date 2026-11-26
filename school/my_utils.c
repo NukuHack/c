@@ -23,6 +23,20 @@ int my_main(int argc, char **argv) {
     return 0;
 }
 
+#define LENGTH 20
+int arr_main(void) {
+    int tomb[LENGTH];
+
+    arr_fill(ARR_L(tomb));
+    arr_qsort(ARR_L(tomb));
+    arr_reverse(int, tomb, ARR_S(tomb));
+
+    arr_print(int, tomb, ARR_S(tomb));
+
+    return 0;
+}
+
+
 static bool seeded = false;
 void ensure_seed(void) {
     if (!seeded) {
@@ -127,7 +141,61 @@ void strrep(char *str, int len, char old, char upd) {
             str[len] = upd;
 }
 
-/* just for testing */
+// Array_Operations :
+
+int arr_max(const int *arr, size_t len) {
+    if (!arr || len == 0)
+        return 0;
+
+    int num = arr[0];
+    arr_foreach(int, var, arr, len)
+        if (var > num) num = var;
+    return num;
+}
+int arr_min(const int *arr, size_t len) {
+    if (!arr || len == 0)
+        return 0;
+
+    int num = arr[0];
+    arr_foreach(int, var, arr, len)
+        if (var < num) num = var;
+    return num;
+}
+int arr_sum(const int *arr, size_t len) {
+    int sum = 0;
+    arr_foreach(int, var, arr, len)
+        sum += var;
+    return sum;
+}
+
+
+void arr_fill(int *arr, size_t len) {
+    arr_foreach_p(int, var, arr, len)
+        *var = randi_b(0, 100);
+}
+
+void arr_set(int *arr, size_t len, int num) {
+    arr_foreach_p(int, var, arr, len)
+        *var = num;
+}
+
+int cmp_int_ptr(const void *a, const void *b) {
+    int x = *(const int*)a, y = *(const int*)b;
+    return cmp(x, y);
+}
+void arr_qsort(int *arr, size_t len) {
+    if (!arr || len == 0)
+        return;
+
+    qsort(arr, len, sizeof(int), cmp_int_ptr);
+}
+
+
+
+// File and other testing stuff
+
+
+
 const char *temp_dir(void) {
 #if defined(WIN)
     /* GetTempPathA requires a writable buffer; use a static one.
@@ -162,10 +230,6 @@ double bench_cpu_now(void) {
        intermediate math, and "CLOCKS_PER_SEC" of "1K" or "1M" both work. */
     return (double)c / (double)CLOCKS_PER_SEC;
 }
-
-/**
- * FILE stuff :
- * */
 
 bool check_file_exist(const char *name) {
     FILE *file = fopen(name, "r"); // read does not create

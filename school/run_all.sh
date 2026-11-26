@@ -42,7 +42,7 @@ run_files() {
     fi
     $bui macro.c my_utils.c my_io.c $files $flags -Dmacro_main='main' $out
     $bui my_utils.c $files $flags -Dmy_main='main' $out
-    $bui arr_op.c my_io.c my_utils.c $files $flags -Darr_main='main' $out
+    $bui my_io.c my_utils.c $files $flags -Darr_main='main' $out
     $bui logging.c my_utils.c $files $flags -Dlog_main='main' $out
     $bui logging.c my_utils.c $files $flags $log_flag -Dlog_main='main' $out $rm_log
     $bui my_io.c my_utils.c $files $flags -Dinput_main='main' $out
@@ -83,7 +83,7 @@ main_fn() {
         "-main") # as main
             flags="-Xcc $base_flags $leak $mem_flags $log_flag "
             files="$mem_files "
-            cbuild main.c my_io.c my_utils.c arr_op.c $files $flags -- $arg
+            cbuild main.c my_io.c my_utils.c $files $flags -- $arg
             ;;
         *)
             echo "$Usage"

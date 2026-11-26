@@ -9,20 +9,8 @@
 
 #include "my_macro.h"
 
-#if ZERO
-#  define __STDC_WANT_LIB_EXT1__ 1 // this adds "safe" methods from std
-#endif
-
-#define _POSIX_C_SOURCE 200809L
-#include <stdio.h> // io
-#include <stdbool.h> // bool
-#include <stddef.h> // size_t, ptrdiff_t aka ssize_t
-#include <stdlib.h> // basic memory & NULL
-#include <string.h> // batch mem op
-#include <stdint.h> // for max sizes
 #include <limits.h> // limit for overflow checking
 #include <ctype.h> // basic char methods
-#include <errno.h> // error mainly for "EOF" and "errno" at builtin stuff
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
 #  if !defined(WIN)
@@ -30,6 +18,14 @@
 #  endif /* win-def */
 #endif
 
+// generate a random between bounds
+int randi_b(int min, int max);
+// random int
+int randi(void);
+// random double
+double randd(void);
+// random double, bounded; please no NAN in this !!!
+double randd_b(double min, double max);
 /* 2 pointers in alpha order, returns NULL if eq */
 char* alphabetic(char* a, char* b);
 /* count the words (separator take in) */
@@ -42,23 +38,32 @@ char **shift_args(int *argc, char ***argv);
 void clear(void);
 // Sleeps for a given number of milliseconds
 void slep(double millis);
+// compare, ++ = a bigger, -- = b bigger, 0 = equal
+int cmp(int a, int b);
+// same ^ just with pointers
+int cmp_int_ptr(const void *a, const void *b);
+
 // temp dir, not thread safe
 const char *temp_dir(void);
 /* small check */
 bool check_file_exist(const char *name);
-// compare, ++ = a bigger, -- = b bigger, 0 = equal
-int cmp(int a, int b);
-// generate a random between bounds
-int randi_b(int min, int max);
-// random int
-int randi(void);
-// random double
-double randd(void);
-// random double, bounded
-// please no NAN in this !!!
-double randd_b(double min, double max);
 /* ---- CPU time ---- */
 double bench_cpu_now(void);
+
+// Merged Array_Operations into this
+
+// Returns max value, or 0
+int arr_max(const int *arr, size_t len);
+// Returns min value, or 0
+int arr_min(const int *arr, size_t len);
+// Returns sum, or 0
+int arr_sum(const int *arr, size_t len);
+// Fill with random values 0..100
+void arr_fill(int *arr, size_t len);
+// Fill with num
+void arr_set(int *arr, size_t len, int num);
+// qsort, it is just a wrapper for the std's impl
+void arr_qsort(int *arr, size_t len);
 
 
 

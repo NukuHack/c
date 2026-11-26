@@ -17,6 +17,20 @@
 #  define NOOP
 #endif /* NOOP - do nothing */
 
+#if ZERO
+#  define __STDC_WANT_LIB_EXT1__ 1 // this adds "safe" methods from std
+#endif
+
+#define _POSIX_C_SOURCE 200809L
+/* "import std::*;" */
+#include <stdio.h> // io
+#include <stdbool.h> // bool
+#include <stddef.h> // size_t, ptrdiff_t aka ssize_t
+#include <stdlib.h> // basic memory & NULL
+#include <string.h> // batch mem op
+#include <stdint.h> // for max sizes
+#include <errno.h> // error mainly for "EOF" and "errno" at builtin stuff
+
 #if !defined(BUF_LEN)
 #     define BUF_LEN 128
 #endif /* BUF_LEN */
@@ -229,14 +243,14 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 #define FMT_int "%d"
 #define FMT_long "%ld"
 #define FMT_llong "%lld"
-#define FMT_double "%f"
+#define FMT_double "%lf"
 #define FMT_char "%c"
 #define FMT_str "%s"
 #define FMT_cstr FMT_str
 #define FMT_uint "%u"
 #define FMT_ulong "%lu"
 #define FMT_ullong "%llu"
-#define FMT_float FMT_double
+#define FMT_float "%f"
 #define FMT_short FMT_int
 #define FMT_size_t "%zu"
 #define FMT_ptrdiff_t FMT_size_t
@@ -303,17 +317,21 @@ void *resize_buff(void *buf, size_t *cap, size_t size) {
 
 /* print an array, in one line */
 #define arr_print(ty, arr, len) \
+    arr_print_fmt(ty, SWITCH_FMT(ty), arr, len)
+
+/* fmt must be a compile time Known */
+#define arr_print_fmt(ty, fmt, arr, len) \
     do { \
         size_t len_ = (len); \
-        printf(#arr ") : ["); \
+        fputs(#arr ") : [", stdout); \
         arr_foreach(ty, var, (arr), len_) { \
             if (arr_for_i != len_-1) \
-                printf(SWITCH_FMT(ty)", ", var); \
+                printf(fmt ", ", var); \
             else \
-                printf(SWITCH_FMT(ty), var); \
+                printf(fmt, var); \
         } \
-        printf("]\n"); \
-    } while (0);
+        puts("]"); \
+    } while (0)
 
 /* print an array, each item in a new line */
 #define arr_print_n(ty, arr, len) \
