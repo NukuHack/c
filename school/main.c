@@ -11,8 +11,12 @@ typedef struct TomoritettAdat {
     unsigned int checksum;  // Az adatintegritást védő ellenőrző összeg
     RleBlokk* blokkok;      // Dinamikusan foglalt tömb a blokkoknak
 } TomoritettAdat;
+#define Adat TomoritettAdat /* define, not typedef, so no conflict */
 
 TomoritettAdat *tomorit(const char* nyers_szoveg);
+bool append_blokk(Adat *adat, size_t *cap, RleBlokk b);
+long check_sum(Adat *adat);
+void print_adat(Adat *adat);
 
 int main(void) {
     str var = inps();
@@ -22,15 +26,13 @@ int main(void) {
     }
     puts(var);
 
-    TomoritettAdat *adat = tomorit(var);
+    Adat *adat = tomorit(var);
     destroy(var);
     if (!adat) {
         fputs("could not compress", stderr);
         return 1;
     }
-    arr_foreach(RleBlokk, var, adat->blokkok, adat->checksum) {
-        printf("char: '"FMT_char"' bd: '"FMT_int"'\n", var.karakter, var.darabszam);
-    }
+    print_adat(adat);
     destroy(adat->blokkok);
     destroy(adat);
 
@@ -40,52 +42,84 @@ int main(void) {
     return 0;
 }
 
-typedef struct {
-    size_t capacity;
-    size_t count;
-    RleBlokk *data;
-} RleVec;
+void print_adat(Adat *adat) {
+    if (!adat)
+        return;
+    if (check_sum(adat) != adat->checksum) {
+        puts("checked 'checksum' BUT it does Not match");
+        return;
+    }
+    puts("checked 'checksum' and it matches");
+    arr_foreach(RleBlokk, var, adat->blokkok, adat->blokkok_szama) {
+        printf("char: '"FMT_char"' bd: '"FMT_int"'\n", isprint(var.karakter) ? var.karakter : '.', var.darabszam);
+    }
+}
+bool append_blokk(Adat *adat, size_t *cap, RleBlokk b) {
+    IF_NGROW(RleBlokk, adat->blokkok, cap, (size_t)adat->blokkok_szama) {
+        perror("adat, grow");
+        destroy(adat->blokkok);
+        destroy(adat);
+        return false;
+    }
+    adat->blokkok[adat->blokkok_szama++] = b;
+    return true;
+}
+long check_sum(Adat *adat) {
+    if (!adat)
+        return -1;
+    RleBlokk *arr = adat->blokkok, *end = arr + adat->blokkok_szama, b;
+    if (!arr)
+        return -1;
+    uint cs = 0;
+    while (arr != end) {
+        b = *arr;
+        cs *= 31;
+        cs += (unsigned int)b.karakter + (unsigned int)b.darabszam;
+        cs %= 1000000007;
+        arr++;
+    }
+    return cs;
+}
 // might fail -> NULL
 // otherwise this needs freeing
-TomoritettAdat *tomorit(const char* nyers_szoveg) {
-    cstr txt = nyers_szoveg; // too long var, name
+Adat *tomorit(const char* txt) {
     size_t len = 0;
     if (!txt || !(len = strlen(txt))) {
         fputs("no input", stderr);
         return NULL;
     }
-    TomoritettAdat *adat = New_c(TomoritettAdat, 1);
+    Adat *adat = New_c(Adat, 1);
     if(!adat) {
         perror("adat, malloc");
         return NULL;
     }
-    char cur = *(txt++);
-    RleBlokk b = {cur, 1};
+
     size_t cap = 0;
-    forx(len) {
-        if (cur == *txt) {
+    RleBlokk b = { *txt++, 1 };
+
+    while (*txt) {
+        if (*(txt++) == b.karakter)
             b.darabszam++;
-        } else {
-            IF_NGROW(RleBlokk, adat->blokkok, &cap, (size_t)adat->blokkok_szama) {
-                perror("vec, grow");
-                destroy_arr(adat->blokkok, adat->blokkok_szama);
+        else {
+            if (!append_blokk(adat, &cap, b))
                 return NULL;
-            }
-            adat->blokkok[adat->blokkok_szama++] = b;
             b.karakter = *txt;
             b.darabszam = 1;
         }
-        cur = *txt; txt++;
-        if (i == len && cur != b.karakter) {
-            IF_NGROW(RleBlokk, adat->blokkok, &cap, (size_t)adat->blokkok_szama) {
-                perror("vec, grow");
-                destroy_arr(adat->blokkok, adat->blokkok_szama);
-                return NULL;
-            }
-            adat->blokkok[adat->blokkok_szama++] = b;
-        }
     }
-    adat->checksum = (uint)len;
+
+    if (!append_blokk(adat, &cap, b))
+        return NULL;
+
+    long cs = check_sum(adat);
+    if (cs < 0) {
+        fputs("adat, checksum", stderr);
+        destroy(adat->blokkok);
+        destroy(adat);
+        return NULL;
+    }
+
+    adat->checksum = (uint)cs; 
     return adat;
 }
 
