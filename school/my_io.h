@@ -45,6 +45,7 @@ int inpi(void);
 uint inpu(void);
 double inpd(void);
 char inpc(void); // only accepts alphabetic chars
+bool confirm(void); // returns true on 'y' || 'Y', retry onanything not 'n' || 'N'
 // bounded versions 
 int inpi_s(const char* text, int min, int max);
 uint inpu_s(const char* text, uint min, uint max);

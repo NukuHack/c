@@ -177,6 +177,55 @@ ending:;;
     return (ptrdiff_t)len;
 }
 
+
+// "fail fast" malloc
+void *xmalloc(size_t n) {
+    void *p = malloc(n ? n : 1);
+    if (!p) {
+        fprintf(stderr, "OOM %zu\n", n);
+        exit(1);
+    }
+    return p;
+}
+// "fail fast" file read, ony files since stdin is a "pipe"
+//   - since seeking is not nossible in "pipes"
+char *read_file(const char *path, size_t *out_len) {
+    FILE *f = fopen(path, "rb");
+    goto body;
+  fail:;
+    if (f)
+        fclose(f);
+    perror(path);
+    exit(1);
+  body:;
+    if (!f) goto fail;
+    if (fseek(f, 0, SEEK_END) != 0) goto fail;
+    long sz = ftell(f); // reliable up to i32 MAX, after that is implementation defined -> 2Gig files
+    if (sz < 0) goto fail;
+    if (fseek(f, 0, SEEK_SET) != 0) goto fail;
+    size_t len = (size_t)sz;
+    char *buf = xmalloc(len + 1); // nul term
+
+    size_t total = 0;
+    while (total < len) {
+        size_t n = fread(buf + total, 1, len - total, f);
+        if (n == 0) {
+            if (ferror(f)) {
+                fputs("fread failed: ", stderr);
+                goto fail;
+            }
+            break; // unexpected EOF
+        }
+        total += n;
+    }
+
+    buf[total] = '\0';
+    fclose(f);
+    if (out_len) *out_len = total;
+    return buf;
+}
+
+
 ptrdiff_t fputbatch(char **bufptr, size_t *n, FILE *out, bool stpN) {
     if (!bufptr || !*bufptr || !n || *n == 0 || !out) {
         return -1;
@@ -210,6 +259,12 @@ double inpd(void) {
 }
 char inpc(void) {
     return inpc_s("input an alphabetic char: ", (predicate*)isalpha);
+}int y_or_n(int c) {
+    int ch = tolower(c);
+    return ch == 'y' || ch == 'n';
+}
+bool confirm(void) {
+    return tolower(inpc_s("continue [y/n]: ", y_or_n)) == 'y';
 }
 char* inps(void) {
     return inps_s("input a line: \n");

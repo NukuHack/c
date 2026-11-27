@@ -17,4 +17,6 @@ build/
 // compiler output
 *.gch
 
+// custom
+jai/
 

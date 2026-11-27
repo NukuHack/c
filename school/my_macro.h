@@ -92,8 +92,10 @@
    // since preprocessor does not like "char*"
    typedef char *str;
    typedef const char *cstr;
+   typedef unsigned char uchar;
 #  define str str
 #  define cstr cstr
+#  define uchar uchar
 #endif /* STR_TYPE */
 
 #if !defined(KB) && !defined(MB) && !defined(GB) // rest not listed

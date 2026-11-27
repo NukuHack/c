@@ -231,7 +231,7 @@ double bench_cpu_now(void) {
     return (double)c / (double)CLOCKS_PER_SEC;
 }
 
-bool check_file_exist(const char *name) {
+bool file_exist(const char *name) {
     FILE *file = fopen(name, "r"); // read does not create
     if (!file) {
         // could check for errno, or other thing but for now, just return

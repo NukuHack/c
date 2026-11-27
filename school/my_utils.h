@@ -46,7 +46,7 @@ int cmp_int_ptr(const void *a, const void *b);
 // temp dir, not thread safe
 const char *temp_dir(void);
 /* small check */
-bool check_file_exist(const char *name);
+bool file_exist(const char *name);
 /* ---- CPU time ---- */
 double bench_cpu_now(void);
 
