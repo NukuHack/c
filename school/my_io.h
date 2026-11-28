@@ -45,12 +45,12 @@ int inpi(void);
 uint inpu(void);
 double inpd(void);
 char inpc(void); // only accepts alphabetic chars
-bool confirm(void); // returns true on 'y' || 'Y', retry onanything not 'n' || 'N'
 // bounded versions 
 int inpi_s(const char* text, int min, int max);
 uint inpu_s(const char* text, uint min, uint max);
 double inpd_s(const char* text, double min, double max);
 char inpc_s(const char* text, predicate *filter);
+bool confirm(cstr text); // returns true on 'y' || 'Y', retry onanything not 'n' || 'N'
 
 // string stuff - MALLOCS must free it after use 
 // read_str does not malloc, it uses the input buffer 

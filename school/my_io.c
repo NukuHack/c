@@ -263,8 +263,8 @@ char inpc(void) {
     int ch = tolower(c);
     return ch == 'y' || ch == 'n';
 }
-bool confirm(void) {
-    return tolower(inpc_s("continue [y/n]: ", y_or_n)) == 'y';
+bool confirm(cstr text) {
+    return tolower(inpc_s(text, y_or_n)) == 'y';
 }
 char* inps(void) {
     return inps_s("input a line: \n");
